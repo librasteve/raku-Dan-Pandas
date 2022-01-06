@@ -3,12 +3,12 @@ FROM --platform=linux/arm64 jupyter/scipy-notebook
 ENV PATH=$PATH:/usr/share/perl6/site/bin
 
 USER root
-RUN buildDeps="libc6-dev \
-         libencode-perl \
-         libzstd-dev \
-         libssl-dev" \
+RUN buildDeps="libc6-dev libencode-perl libzstd-dev libssl-dev \
+               libbz2-dev libreadline-dev libsqlite3-dev llvm \
+               libncurses5-dev tk-dev liblzma-dev \
+               python-openssl python3-dev libpython3.9-dev" \
     && apt-get update && apt-get upgrade -y \
-    && apt-get install -y --no-install-recommends build-essential curl $buildDeps \
+    && apt-get install -y --no-install-recommends build-essential curl wget $buildDeps \
     && rm -rf /var/lib/apt/lists/* 
 
 RUN mkdir rakudo && git init \
