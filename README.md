@@ -1,2 +1,2 @@
-# raku Dan::Qinling
+# raku Dan::Pandas
 raku pandas binding
