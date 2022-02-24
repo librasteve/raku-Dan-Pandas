@@ -7,7 +7,15 @@ $py.run('print("hello world")');
 
 $py.run('import numpy as np');
 $py.run('import pandas as pd');
-say EVAL('pd.Series([1, 3, 5, np.nan, 6, 8])', :lang<Python>);
+
+my $ps = EVAL('pd.Series([1, 3, 5, np.nan, 6, 8])', :lang<Python>);
+dd $ps;
+
+my $po = EVAL('print(pd.Series([1, 3, 5, np.nan, 6, 8]))', :lang<Python>);
+dd $po;
+
+use Dan;
+say ~Series.new([1, 3, 5, NaN, 6, 8]);
 
 #`[
 use string:from<Python>;
@@ -25,6 +33,5 @@ my $s = pandas::Series([1, 3, 5, 6, 8]);
 say $s;
 #]
 
-#use matplotlib::pyplot:from<Python>;
 
 
