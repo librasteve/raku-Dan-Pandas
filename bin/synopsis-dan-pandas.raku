@@ -4,6 +4,29 @@ use MONKEY-SEE-NO-EVAL;
 use lib '../lib';
 use Inline::Python;
 
+#[[[
+use Dan;
+use Dan::Pandas;
+
+my $ser = Series.new([1, 3, 5, NaN, 6, 8]);
+
+my $pdf = Dan::Pandas::DataFrame.new([$ser]);
+say ~$pdf;
+#]]]
+
+#`[[[
+use Dan;
+use Dan::Pandas;
+
+my $ser = Series.new([1, 3, 5, NaN, 6, 8]) does Dan::Pandas;
+
+my $pdf = DataFrame.new([$ser]) does Dan::Pandas;
+say ~$pdf;
+#]]]
+
+die;
+
+#`[[[
 my $py = Inline::Python.new();
 $py.run('print("hello world")');
 
@@ -40,8 +63,6 @@ dd $xs;
 #my $s = pandas::Series( $[1e0,2e0,3e0], $[0,1,2] );
 #my $s = pandas::Series( $[1e0,2e0,3e0], $<a b c> );
 
-use Dan;
-say ~Dan::Series.new([1, 3, 5, NaN, 6, 8]);
 
 use string:from<Python>;
 my $t = string::capwords('foo bar');
@@ -72,4 +93,4 @@ dd $s;
 #quite liking the Inline::Python object syntax ... BUT will use the EVAL because it works with ootb IP
 # and I can see how to make calls on objects and do a bunch of prep before returning
 
-
+#]]]
