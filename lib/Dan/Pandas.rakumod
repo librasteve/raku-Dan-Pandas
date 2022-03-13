@@ -9,6 +9,7 @@ my $py = Inline::Python.new();
 $py.run('import numpy as np');
 $py.run('import pandas as pd');
 
+#[
 role Series is export {
 
     method yo { 
@@ -23,7 +24,7 @@ role Series is export {
 role DataFrame is export {
 
 }
-
+#]
 
 
 #`[[

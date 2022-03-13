@@ -4,10 +4,10 @@ use MONKEY-SEE-NO-EVAL;
 use lib '../lib';
 use lib '../../raku-dan/lib';
 
-use Inline::Python;
+#use Inline::Python;
 
-use Dan;
 use Dan::Pandas;
+use Dan;
 
 #[ test new constructor
 #my $ser = Series.new(data=>[1, 3, 5, NaN, 6, 8]);
@@ -44,7 +44,6 @@ my $pdf = DataFrame.new([$ser]) does Dan::Pandas;
 say ~$pdf;
 #]]]
 
-die;
 
 #`[[[
 my $py = Inline::Python.new();
