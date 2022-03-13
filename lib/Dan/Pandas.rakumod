@@ -1,29 +1,48 @@
 unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 
-#`[
 use Dan;
 
-role Series does Dan::Series is export {
-	say "sss";
+use Inline::Python;
+
+my $py = Inline::Python.new();
+
+$py.run('import numpy as np');
+$py.run('import pandas as pd');
+
+role Series is export {
+
+    method yo { 
+        $py.run('print("hello world")');
+	#say my $ps = EVAL('pd.Series([1, 3, 5, np.nan, 6, 8])', :lang<Python>);
+	"wo" 
+    }
+
+	
 }
 
-role DataFrame does Dan::DataFrame is export {
-	say "fff";
+role DataFrame is export {
+
 }
-#]
+
+
 
 #`[[
-# helper declarations & functions
 
-#generates default column labels
+### Declarations & Helper Functions ###
+
+# set mark for index/column duplicates
+constant $mark = '⋅'; # unicode Dot Operator U+22C5
+my regex notmark { <-[⋅]> }
+
+# generates default column labels
 constant @alphi = 'A'..∞; 
 
 # sorts Hash by value, returns keys (poor woman's Ordered Hash)
-sub sbv( %h --> Seq ) is export {
+sub sbv( %h --> Seq ) is export(:ALL) {
     %h.sort(*.value).map(*.key)
 }
 
-role DataSlice does Positional does Iterable is export {
+role DataSlice does Positional does Iterable is export(:ALL) {
     has Str     $.name is rw = 'anon';
     has Any     @.data;
     has Int     %.index;
@@ -33,6 +52,80 @@ role DataSlice does Positional does Iterable is export {
     # accept index as List, make Hash
     multi method new( List:D :$index, *%h ) {
         samewith( index => $index.map({ $_ => $++ }).Hash, |%h )
+    }
+
+    #### MAC Methods #####
+    #Moves, Adds, Changes#
+
+    #| get index as Array (ordered by %.index.values)
+    multi method ix {
+        %.index.&sbv
+    }
+
+    #| set (re)index from Array
+    multi method ix( @new-index ) {
+        %.index.keys.map: { %.index{$_}:delete };
+        @new-index.map:   { %.index{$_} = $++  };
+    }
+
+    #| get self as Array of Pairs
+    multi method aop {
+        self.ix.map({ $_ => @.data[$++] })
+    }
+
+    #| set data and index from Array of Pairs
+    multi method aop( @aop ) {
+        self.ix:    @aop.map(*.key);
+        self.data = @aop.map(*.value);
+    }
+
+    #| splice as Array of values or Array of Pairs
+    #| viz. https://docs.raku.org/routine/splice
+    method splice( DataSlice:D: $start = 0, $elems?, *@replace ) {
+        given @replace {
+            when .first ~~ Pair {
+                my @aop = self.aop;
+                my @res = @aop.splice($start, $elems//*, @replace);
+                self.aop: @aop;
+                @res
+            }
+            default {
+                my @res = @!data.splice($start, $elems//*, @replace); 
+                self.fillna; 
+                @res
+            }
+        }
+    }
+
+    #| set empty data slots to Nan
+    method fillna {
+        self.aop.grep(! *.value.defined).map({ $_.value = NaN });
+    }
+
+    #| drop index and data when Nan
+    method dropna {
+        self.aop: self.aop.grep(*.value ne NaN);
+    }
+
+    #| drop index and data when empty 
+    method dropem {
+        self.aop: self.aop.grep(*.value.defined).Array;
+    }
+
+    # concat
+    method concat( DataSlice:D $dsr ) {
+        self.index.map({ 
+            if $dsr.index{$_.key}:exists {
+                warn "duplicate key {$_.key} not permitted" 
+            } 
+        });
+
+        my $start = self.index.elems;
+        my $elems = $dsr.index.elems;
+        my @replace = $dsr.aop;
+
+        self.splice: $start, $elems, @replace;    
+        self
     }
 
     ### Output Methods ###
@@ -107,7 +200,8 @@ role DataSlice does Positional does Iterable is export {
     }
 }
 
-role Series does DataSlice is export {
+#| Series is a shim on DataSlice to mix in dtype and legacy constructors
+role Series does DataSlice is export(:ALL) {
     has Any:U       $.dtype;                  #ie. type object
 
     ### Constructors ###
@@ -142,8 +236,9 @@ role Series does DataSlice is export {
         samewith( data => ($data xx $index.elems).Array, :$index, |%h )
     }
 
+    # provide ^name of type object eg. for output
     multi method dtype {
-        $!dtype.^name       #provide ^name of type object eg. for output
+        $!dtype.^name       
     }
 
     method TWEAK {
@@ -154,7 +249,7 @@ role Series does DataSlice is export {
             @.data = gather {
                 for @.data -> $p {
                     take $p.value;
-                    %.index.push: $p;
+                    %.index{$p.key} = $++;
                 }
             }.Array
 
@@ -198,10 +293,6 @@ role Series does DataSlice is export {
 
     ### Mezzanine methods ###  (these use Accessors)
 
-    method ix {
-        %.index.&sbv
-    }
-
     method count { 
         $.elems 
     }
@@ -244,14 +335,14 @@ role Series does DataSlice is export {
     }
 }
 
-role Categorical is Series is export {
+role Categorical is Series is export(:ALL) {
     # Output
     method dtype {
         Str.^name
     }
 }
 
-role DataFrame does Positional does Iterable is export {
+role DataFrame does Positional does Iterable is export(:ALL) {
     has Str         $.name is rw = 'anon';
     has Any         @.data = [];        #redo 2d shaped Array when [; ] implemented
     has Int         %.index;            #row index
@@ -276,7 +367,7 @@ role DataFrame does Positional does Iterable is export {
     }
 
     # helper functions
-    method load-from-series( @series, $row-count ) {
+    method load-from-series( :$row-count, *@series ) {
         loop ( my $i=0; $i < @series; $i++ ) {
 
             @!dtypes.push: @series[$i].dtype;
@@ -330,7 +421,7 @@ role DataFrame does Positional does Iterable is export {
 
                 # clear and load data
                 @!data = [];
-                $.load-from-series: @series, +@index;
+                $.load-from-series: row-count => +@index, |@series;
 
                 # make index Hash (row label => pos) 
                 my $j = 0;
@@ -350,7 +441,7 @@ role DataFrame does Positional does Iterable is export {
 
                 # clear and load data (and columns)
                 @!data = [];
-                $.load-from-series: @series, $row-count;
+                $.load-from-series: :$row-count, |@series;
 
                 # make index Hash
                 %!index = @series.first.index;
@@ -377,15 +468,290 @@ role DataFrame does Positional does Iterable is export {
                 }
                 if ! %!columns {
                     @alphi[0..^@!data.first.elems].map( {%!columns{$_} = $++} ).eager;
-                    #eager @alphi[0..^@!data.first.elems].map( {%!columns{$_} = $++} );
-                    #%!columns  #<== have to "touch" %!columns to avoid empty hash
                 }
                 #no-op
             } 
         }
     }
 
-    ### Mezzanine methods ###  (these use Accessors)
+    #### MAC Methods #####
+    #Moves, Adds, Changes#
+
+    #| get index as Array (ordered by %.index.values)
+    multi method ix {
+        %!index.&sbv
+    }
+
+    #| set (re)index from Array
+    multi method ix( @new-index ) {
+        %.index.keys.map: { %.index{$_}:delete };
+        @new-index.map:   { %.index{$_} = $++  };
+    }
+
+    #| get columns as Array (ordered by %.column.values)
+    multi method cx {
+        %!columns.&sbv
+    }
+
+    #| set columns (relabel) from Array
+    multi method cx( @new-labels ) {
+        %.columns.keys.map: { %.columns{$_}:delete };
+        @new-labels.map:    { %.columns{$_} = $++  };
+    }
+
+    ### Splicing ###
+
+    #| reset attributes
+    method reset( :$axis ) {
+
+        @!data = [];
+
+        if ! $axis {
+            %!index = %()
+        } else {
+            @!dtypes  = [];
+            %!columns = %()
+        }
+    }
+
+    #| get as Array or Array of Pairs - [index|columns =>] DataSlice|Series
+    method get-ap( :$axis, :$pair ) {
+        given $axis, $pair {
+            when 0, 0 {
+                self.[*]
+            }
+            when 0, 1 {
+                my @slices = self.[*];
+                self.ix.map({ $_ => @slices[$++] })
+            }
+            when 1, 0 {
+                self.cx.map({self.series($_)}).Array
+            }
+            when 1, 1 {
+                my @series = self.cx.map({self.series($_)}).Array;
+                self.cx.map({ $_ => @series[$++] })
+            }
+        }
+    }
+
+    #| set from Array or Array of Pairs - [index|columns =>] DataSlice|Series
+    method set-ap( :$axis, :$pair, *@set ) {
+
+        self.reset: :$axis;
+
+        given $axis, $pair {
+            when 0, 0 {                         # row - array
+                self.load-from-slices: @set
+            }
+            when 0, 1 {                         # row - aops 
+                self.load-from-slices: @set.map(*.value);
+                self.ix: @set.map(*.key)
+            }
+            when 1, 0 {                         # col - array
+                self.load-from-series: row-count => @set.first.elems, |@set
+            }
+            when 1, 1 {                         # col - aops
+                self.load-from-series: row-count => @set.first.value.elems, |@set.map(*.value);
+                self.cx: @set.map(*.key)
+            }
+        }
+    }
+
+    sub clean-axis( :$axis ) {
+        given $axis {
+            when ! .so || /row/ { 0 }
+            when   .so || /col/ { 1 }
+        }
+    }
+
+    #| splice as Array or Array of Pairs - [index|columns =>] DataSlice|Series
+    #| viz. https://docs.raku.org/routine/splice
+    method splice( DataFrame:D: $start = 0, $elems?, :ax(:$axis) is copy, *@replace ) {
+
+           $axis = clean-axis(:$axis);
+        my $pair = @replace.first ~~ Pair ?? 1 !! 0;
+
+        my @wip = self.get-ap: :$axis, :$pair;
+        my @res = @wip.splice: $start, $elems//*, @replace;   # just an Array splice
+                  self.set-ap: :$axis, :$pair, @wip;
+
+        @res
+    }
+
+    # concat
+    method concat( DataFrame:D $dfr, :ax(:$axis) is copy,           #TODO - refactor for speed?   
+                     :jn(:$join) = 'outer', :ii(:$ignore-index) ) {
+
+        $axis = clean-axis(:$axis);
+        my $ax = ! $axis;        #AX IS INVERSE AXIS
+
+        my ( $start,   $elems   );
+        my ( @left,    @right   );
+        my ( $l-empty, $r-empty );
+        my ( %l-drops, %r-drops );
+
+        if ! $axis {            # row-wise
+
+            # set extent of main slice 
+            $start = self.index.elems;
+            $elems = $dfr.index.elems;
+
+            # take stock of cols
+            @left   = self.cx;
+            @right  = $dfr.cx;
+
+            # make some empties
+            $l-empty = Series.new( NaN, index => [self.ix] );
+            $r-empty = Series.new( NaN, index => [$dfr.ix] );
+
+            # load drop hashes
+            %l-drops = self.columns;
+            %r-drops = $dfr.columns;
+
+        } else {                # col-wise
+
+            # set extent of main slice
+            $start = self.columns.elems;
+            $elems = $dfr.columns.elems;
+
+            # take stock of rows
+            @left   = self.ix;
+            @right  = $dfr.ix;
+
+            # make some empties
+            $l-empty = DataSlice.new( data => [NaN xx self.cx.elems], index => [self.cx] );
+            $r-empty = DataSlice.new( data => [NaN xx $dfr.cx.elems], index => [$dfr.cx] );
+
+            # load drop hashes
+            %l-drops = self.index;
+            %r-drops = $dfr.index;
+
+        }
+
+        my @inner  = @left.grep(  * ∈ @right );
+        my @l-only = @left.grep(  * ∉ @inner );
+        my @r-only = @right.grep( * ∉ @inner );
+        my @outer  = |@l-only, |@r-only;
+
+        # helper functions for adjusting columns
+
+        sub add-ronly-to-left {
+            for @r-only -> $name {
+                self.splice: :$ax, *, *, ($name => $l-empty)
+            }
+        }
+        sub add-lonly-to-right {
+            for @l-only -> $name {
+                $dfr.splice: :$ax, *, *, ($name => $r-empty)
+            }
+        }
+        sub drop-outers-from-left {
+            for @l-only -> $name {
+                self.splice: :$ax, %l-drops{$name}, 1
+            }
+        }
+        sub drop-outers-from-right {
+            for @r-only -> $name {
+                $dfr.splice: :$ax, %r-drops{$name}, 1
+            }
+        }
+
+        # re-arrange left and right 
+        given $join {
+            when /^o/ {          #outer
+                add-ronly-to-left;
+                add-lonly-to-right;
+            }
+            when /^i/ {          #inner
+                drop-outers-from-left;
+                drop-outers-from-right;
+            }
+            when /^l/ {          #left
+                add-lonly-to-right;
+                drop-outers-from-right;
+            }
+            when /^r/ {          #right
+                add-ronly-to-left;
+                drop-outers-from-left;
+            }
+        }
+
+        # load new row/col info
+        my ( @new-left, @new-right );
+        my ( %new-left, %new-right );
+
+        if ! $axis {    #row-wise
+            @new-left  = self.cx;       @new-right = $dfr.cx;
+            %new-left  = self.columns;  %new-right = $dfr.columns;
+        } else {        #column-wise
+            @new-left  = self.ix;       @new-right = $dfr.ix;
+            %new-left  = self.index;    %new-right = $dfr.index;
+        }
+
+        # align new right to new left
+        for 0..^+@new-left -> $i {
+            if @new-left[$i] ne @new-right[$i] {
+                my @mover = $dfr.splice: :$ax, %new-right{@new-left[$i]}, 1; 
+                $dfr.splice: :$ax, $i, 0, @mover; 
+            }
+        }
+
+        # load name duplicates
+        my $dupes = ().BagHash;
+        my ( @new-main, %new-main );
+
+        if ! $axis {    #row-wise
+            @new-main = self.ix;
+            %new-main = self.index;
+        } else {        #column-wise
+            @new-main = self.cx;
+            %new-main = self.columns;
+        }
+
+        @new-main.map({ $_ ~~ / ^ (<notmark>*) /; $dupes.add(~$0) }); 
+
+        # load @replace as array of pairs
+        my @replace = $dfr.get-ap( :$axis, pair => 1 );
+
+        # handle name duplicates
+        @replace.map({ 
+            if %new-main{$_.key}:exists {
+                #warn "duplicate key {$_.key}";
+
+                $_.key ~~ / ^ (<notmark>*) /;
+                my $b-key = ~$0;
+                my $n-key = $b-key ~ $mark ~ $dupes{$b-key};
+
+                $_ = $n-key => $_.value; 
+                $dupes{$b-key}++;
+            } 
+        });
+
+        # do the main splice
+        self.splice: :$axis, $start, $elems, @replace;    
+
+        # handle ignore-index
+        if $ignore-index {
+            if ! $axis {
+                my $size = self.ix.elems;
+                self.index = %();
+                self.index{~$_} = $_ for 0..^$size
+            } else {
+                my $size = self.cx.elems;
+                self.columns = %();
+                self.columns{~$_} = $_ for 0..^$size
+            }
+        } 
+
+        self
+    }
+
+    ### Mezzanine methods ###  
+    # (these use Accessors) #
+
+    method fillna {
+        self.map(*.map({ $_ //= NaN }).eager);
+    }
 
     method T {
         DataFrame.new( data => ([Z] @.data), index => %.columns, columns => %.index )
@@ -393,14 +759,6 @@ role DataFrame does Positional does Iterable is export {
 
     method series( $k ) {
         self.[*]{$k}
-    }
-
-    method ix {
-        %!index.&sbv
-    }
-
-    method cx {
-        %!columns.&sbv
     }
 
     method sort( &cruton ) {  #&custom-routine-to-use
@@ -441,6 +799,10 @@ role DataFrame does Positional does Iterable is export {
     }
 
     ### Output methods ###
+
+    method shape {
+        self.ix.elems, self.cx.elems
+    }
 
     method dtypes {
         my @labels = self.columns.&sbv;
@@ -536,17 +898,17 @@ role DataFrame does Positional does Iterable is export {
 }
 
 ### Postfix '^' as explicit subscript chain terminator
-multi postfix:<^>( DataSlice @ds ) is export {
+multi postfix:<^>( DataSlice @ds ) is export(:ALL) {
     DataFrame.new(@ds) 
 }
-multi postfix:<^>( DataSlice $ds ) is export {
+multi postfix:<^>( DataSlice $ds ) is export(:ALL) {
     DataFrame.new(($ds,)) 
 }
 
 ### Override first subscript [i] to make DataSlices (rows)
 
 #| provides single DataSlice which can be [j] subscripted directly to value 
-multi postcircumfix:<[ ]>( DataFrame:D $df, Int $p ) is export {
+multi postcircumfix:<[ ]>( DataFrame:D $df, Int $p ) is export(:ALL) {
     DataSlice.new( data => $df.data[$p;*], index => $df.columns, name => $df.index.&sbv[$p] )
 }
 
@@ -558,14 +920,14 @@ sub make-aods( $df, @s ) {
 }
 
 #| slices make Array of DataSlice objects
-multi postcircumfix:<[ ]>( DataFrame:D $df, @s where Range|List ) is export {
+multi postcircumfix:<[ ]>( DataFrame:D $df, @s where Range|List ) is export(:ALL) {
     make-aods( $df, @s )
 }
-multi postcircumfix:<[ ]>( DataFrame:D $df, WhateverCode $p ) is export {
+multi postcircumfix:<[ ]>( DataFrame:D $df, WhateverCode $p ) is export(:ALL) {
     my @s = $p( |($df.elems xx $p.arity) );
     make-aods( $df, @s )
 }
-multi postcircumfix:<[ ]>( DataFrame:D $df, Whatever ) is export {
+multi postcircumfix:<[ ]>( DataFrame:D $df, Whatever ) is export(:ALL) {
     my @s = 0..^$df.elems; 
     make-aods( $df, @s )
 }
@@ -588,44 +950,43 @@ sub make-series( @sls ) {
 }
 
 #| provides single Series which can be [j] subscripted directly to value 
-multi postcircumfix:<[ ]>( DataSlice @aods , Int $p ) is export {
+multi postcircumfix:<[ ]>( DataSlice @aods , Int $p ) is export(:ALL) {
     make-series( sliced-slices(@aods, ($p,)) )
 }
 
 #| make DataFrame from sliced DataSlices 
-multi postcircumfix:<[ ]>( DataSlice @aods , @s where Range|List ) is export {
+multi postcircumfix:<[ ]>( DataSlice @aods , @s where Range|List ) is export(:ALL) {
     DataFrame.new( sliced-slices(@aods, @s) )
 }
-multi postcircumfix:<[ ]>( DataSlice @aods, WhateverCode $p ) is export {
+multi postcircumfix:<[ ]>( DataSlice @aods, WhateverCode $p ) is export(:ALL) {
     my @s = $p( |(@aods.first.elems xx $p.arity) );
     DataFrame.new( sliced-slices(@aods, @s) )
 }
-multi postcircumfix:<[ ]>( DataSlice @aods, Whatever ) is export {
+multi postcircumfix:<[ ]>( DataSlice @aods, Whatever ) is export(:ALL) {
     my @s = 0..^@aods.first.elems;
     DataFrame.new( sliced-slices(@aods, @s) )
 }
 
 ### Override first assoc subscript {i}
 
-multi postcircumfix:<{ }>( DataFrame:D $df, $k ) is export {
+multi postcircumfix:<{ }>( DataFrame:D $df, $k ) is export(:ALL) {
     $df[$df.index{$k}]
 }
-multi postcircumfix:<{ }>( DataFrame:D $df, @ks ) is export {
+multi postcircumfix:<{ }>( DataFrame:D $df, @ks ) is export(:ALL) {
     $df[$df.index{@ks}]
 }
 
 ### Override second subscript [j] to make DataFrame
 
-multi postcircumfix:<{ }>( DataSlice @aods , $k ) is export {
+multi postcircumfix:<{ }>( DataSlice @aods , $k ) is export(:ALL) {
     my $p = @aods.first.index{$k};
     make-series( sliced-slices(@aods, ($p,)) )
 }
-multi postcircumfix:<{ }>( DataSlice @aods , @ks ) is export {
+multi postcircumfix:<{ }>( DataSlice @aods , @ks ) is export(:ALL) {
     my @s = @aods.first.index{@ks};
     DataFrame.new( sliced-slices(@aods, @s) )
 }
 #]]
 
 #EOF
-
 

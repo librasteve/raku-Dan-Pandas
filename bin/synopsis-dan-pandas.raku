@@ -2,13 +2,33 @@
 use MONKEY-SEE-NO-EVAL;
 
 use lib '../lib';
+use lib '../../raku-dan/lib';
+
 use Inline::Python;
 
-#[[[
 use Dan;
 use Dan::Pandas;
 
-my $ser = Series.new([1, 3, 5, NaN, 6, 8]);
+#[ test new constructor
+#my $ser = Series.new(data=>[1, 3, 5, NaN, 6, 8]);
+#my $ser = Series.new([1, 3, 5, NaN, 6, 8]);
+my $ser = Series.new(data => [1, 3, 5, NaN, 6, 8], index => <a b c d e f>);
+say ~$ser;
+say $ser.^name;
+say $ser.yo;
+#]
+
+#`[[[ #spike raw
+my $s = Series.new;
+#my $s = Dan::Series.new;
+#my $s = Dan::Pandas::Series.new;
+
+#say $s.no, $s.yo, $s.^name;
+say $s.no, $s.^name;
+#]]]
+
+#`[[[
+my $ser = Dan::Pandas::Series.new([1, 3, 5, NaN, 6, 8]);
 
 my $pdf = Dan::Pandas::DataFrame.new([$ser]);
 say ~$pdf;
