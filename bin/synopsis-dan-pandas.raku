@@ -8,13 +8,15 @@ use lib '../../raku-dan/lib';
 use Dan::Pandas;
 use Dan;
 
+#my \s = Series.new( [b=>1, a=>0, c=>2] );               #from Array of Pairs
+#  -or- Series.new( [rand xx 5], index => <a b c d e>);
+#  -or- Series.new( data => [1, 3, 5, NaN, 6, 8], index => <a b c d e f>, name => 'john' );
+
 #[ test new constructor
 #my $ser = Series.new(data=>[1, 3, 5, NaN, 6, 8]);
 #my $ser = Series.new([1, 3, 5, NaN, 6, 8]);
-my $ser = Series.new(data => [1, 3, 5, NaN, 6, 8], index => <a b c d e f>);
+my $ser = Series.new(data => [1, 3, 5, NaN, 6, 8], index => <a b c d e f>, name => 'john' );
 say ~$ser;
-say $ser.^name;
-say $ser.yo;
 #]
 
 #`[[[ #spike raw

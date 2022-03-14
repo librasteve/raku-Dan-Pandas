@@ -3,58 +3,49 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 use Dan;
 use Inline::Python;
 
-#`[
-#| singleton pattern 
-#| viz. https://docs.raku.org/language/classtut
-
-class Py {
-    my  Py $instance;
-    has Inline::Python $.py;
-
-    method new {!!!}
-
-    submethod instance {
-	unless $instance {
-            $instance = Py.bless( py => Inline::Python.new ); 
-	    $instance.py.run('import numpy as np');
-	    $instance.py.run('import pandas as pd');
-	}
-        $instance;
-    }
+# sorts Hash by value, returns keys (poor woman's Ordered Hash)
+sub sbv( %h --> Seq ) is export(:ALL) {
+    %h.sort(*.value).map(*.key)
 }
-#]
 
-role Series is export {
-    has $!.py = Inline::Python.new; #each instance has own Python context
-    has $.ps; 
+role DataSlice does Positional does Iterable is export(:ALL) {
+    has Str     $.name is rw = 'anon';
+    has Any     @.data;
+    has Int     %.index;
+}
+
+role Series does Dan::Pandas::DataSlice is export {
+    has Any:U   $.dtype;                  #ie. type object
+
+    has $!py = Inline::Python.new; 	  #each instance has own Python context
+    has $!ps;				  #each instance has own Python Series obj 
 
     ### Constructors ###
 
-#`[[
-    # Positional data array arg => redispatch as Named
+    # accept data as Positional Array arg, redispatch as Named
     multi method new( @data, *%h ) {
         samewith( :@data, |%h )
-    }
-    # Positional data scalar arg => redispatch as Named
-    multi method new( $data, *%h ) {
-        samewith( :$data, |%h )
     }
     # accept index as List, make Hash
     multi method new( List:D :$index, *%h ) {
         samewith( index => $index.map({ $_ => $++ }).Hash, |%h )
+    }
+
+#`[[
+    # Positional data scalar arg => redispatch as Named
+    multi method new( $data, *%h ) {
+        samewith( :$data, |%h )
     }
     # Real (scalar) data arg => populate Array & redispatch
     multi method new( Real:D :$data, :$index, *%h ) {
         die "index required if data ~~ Real" unless $index;
         samewith( data => ($data xx $index.elems).Array, :$index, |%h )
     }
-
     # Str (scalar) data arg => populate Array & redispatch
     multi method new( Str:D :$data, :$index, *%h ) {
         die "index required if data ~~ Str" unless $index;
         samewith( data => ($data xx $index.elems).Array, :$index, |%h )
     }
-
     # Date (scalar) data arg => populate Array & redispatch
     multi method new( Date:D :$data, :$index, *%h ) {
         die "index required if data ~~ Date" unless $index;
@@ -67,73 +58,67 @@ role Series is export {
     }
 #]]
 
-    method TWEAK { 
-	$!py = Py.instance.py;
+    method TWEAK {
+        $!py.run('import numpy as np');
+        $!py.run('import pandas as pd');
+
+	my $data  = "[{@.data.join(', ')}]";
+	   $data ~~ s/NaN/np.nan/;
+	my $index = "index=['{$.ix.join("', '")}']"; 	
+	my $name  = "name=\"$.name\"" if $.name;
+	my $dtype = "dtype=\"$.dtype\"" if $.dtype;
+
+$!py.run(qq{
+class RakuSeries:
+    def __init__(self):
+        self.series = pd.Series($data, $index, $name)
+        self.string = str(self.series)
+        #print(self.string)
+    def say(self):
+        return(str(self.series))
+        #return(self.string)
+    def dtype(self):
+        print(self.series.dtype.str)
+        return(self.series.dtype.str)
+def rs_str(series):
+    return(str(series))
+    #return(series.string)
+def rs_dtype(series):
+    return(series.dtype())
+});
+
+	$!ps = $!py.call('__main__', 'RakuSeries');
     }
 
-    method yo { 
-	dd $!ps = EVAL('pd.Series([1, 3, 5, np.nan, 6, 8])', :lang<Python>);
+    method Str { 
+#iamerejh
+	#dd $!ps.dtype();
+	#say $!py.call('__main__', 'rs_dtype', $!ps);
+	say $!py.call('__main__', 'rs_str', $!ps);
 
-	dd my $x = $!py.run("pd.Series([1, 3, 5, np.nan, 6, 8])");
- 
-	#dd my $y = $!py.call(pd.Series([1, 3, 5, np.nan, 6, 8])
 
-$!py.run('
-def test():
-    print("ok 1 - executing a parameterless function without return value")
-    return;
-def test_int_params(a, b):
-    if a == 2 and b == 1:
-        print("ok 2 - int params")
-    else:
-        print("not ok 2 - int params")
-    return;
-def test_str_params(a, b, i):
-    if a == "Hello" and b == "Python":
-        print("ok %i - str params" % i)
-    else:
-        print("not ok %i - str params" % i)
-    return;
-def test_int_retval():
-    return 1;
-def test_int_retvals():
-    return 3, 1, 2;
-def test_str_retval():
-    return u"Hello Perl 6!";
-def test_mixed_retvals():
-    return (u"Hello", u"Perl", 6);
-def test_none(undef):
-    return undef is None;
-def test_hash(h):
-    return (
-        isinstance(h, dict)
-        and len(h.keys()) == 2
-        and "a" in h
-        and "b" in h
-        and h["a"] == 2
-        and isinstance(h["b"], dict)
-        and isinstance(h["b"]["c"], list)
-        and len(h["b"]["c"]) == 2
-        and h["b"]["c"][0] == 4
-        and h["b"]["c"][1] == 3
-    )
-def test_foo(foo):
-    return foo.test();
-class Foo:
-    def __init__(self, val):
-        self.val = val
-    def test(self):
-        return self.val
-    def sum(self, a, b):
-        return a + b
-');
 
-        $!py.run('print("hello world")');
-
-	dd $!py.call('__main__', 'test_hash', ${a => 2, b => {c => [4, 3]}});
-	dd $!py.call('__main__', 'print(test_hash)');
+	#say $!py.call('__main__', 'RakuSeries').print();
+        #$!py.call('__main__', 'RakuSeries').dtype();
+	#$!ps.print();
+	#dd my $c = $!ps.dtype();
 	
 	"wo" 
+    }
+
+
+    #### MAC Methods #####
+    #Moves, Adds, Changes#
+
+    #| get index as Array (ordered by %.index.values)
+    multi method ix {
+        %.index.&sbv
+    }
+
+    #| set (re)index from Array
+    multi method ix( @new-index ) {
+        %.index.keys.map: { %.index{$_}:delete };
+        @new-index.map:   { %.index{$_} = $++  };
     }
 
 #`[[
@@ -1159,3 +1144,74 @@ multi postcircumfix:<{ }>( DataSlice @aods , @ks ) is export(:ALL) {
 
 #EOF
 
+#$!py.run('print("hello world")');
+#$!ps = EVAL('pd.Series([1, 3, 5, np.nan, 6, 8])', :lang<Python>);
+
+#`[[
+$!py.run('
+def test():
+    print("ok 1 - executing a parameterless function without return value")
+    return
+def test_int_params(a, b):
+    if a == 2 and b == 1:
+        print("ok 2 - int params")
+    else:
+        print("not ok 2 - int params")
+    return
+def test_str_params(a, b, i):
+    if a == "Hello" and b == "Python":
+        print("ok %i - str params" % i)
+    else:
+        print("not ok %i - str params" % i)
+    return
+def test_int_retval():
+    return 7
+def test_int_retvals():
+    return 3, 1, 2
+def test_str_retval():
+    return u"Hello Perl 6!"
+def test_mixed_retvals():
+    return (u"Hello", u"Perl", 6)
+def test_none(undef):
+    return undef is None
+def test_hash(h):
+    return (
+        isinstance(h, dict)
+        and len(h.keys()) == 2
+        and "a" in h
+        and "b" in h
+        and h["a"] == 2
+        and isinstance(h["b"], dict)
+        and isinstance(h["b"]["c"], list)
+        and len(h["b"]["c"]) == 2
+        and h["b"]["c"][0] == 4
+        and h["b"]["c"][1] == 3
+    )
+def test_foo(foo):
+    return foo.test()
+class Foo:
+    def __init__(self, val):
+        self.val = val
+    def test(self):
+        return self.val
+    def sum(self, a, b):
+        return a + b
+    def yo(self):
+        return self 
+class RakuSeries:
+    def __init__(self, data):
+        self.series = pd.Series([1, 3, 5, np.nan, 6, 8])
+        #self.series = pd.Series(data)
+    def get(self):
+        return self.series
+');
+
+	dd my %h = $!py.call('__main__', 'test_hash', ${a => 2, b => {c => [4, 3]}});
+	dd my $x = $!py.call('__main__', 'test_int_retval');
+	dd my $y = $!py.call('__main__', 'Foo', 1).sum(3, 1);
+	dd my $z = $!py.call('__main__', 'Foo', 1).yo;
+	dd my $a = $z.sum(4,2);
+	dd my $b = $!py.call('__main__', 'RakuSeries', 8);
+	dd my $c = $b.get;
+	
+#]]
