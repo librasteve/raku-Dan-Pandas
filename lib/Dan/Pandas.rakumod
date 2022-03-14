@@ -1,30 +1,198 @@
 unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 
 use Dan;
-
 use Inline::Python;
 
-my $py = Inline::Python.new();
+#`[
+#| singleton pattern 
+#| viz. https://docs.raku.org/language/classtut
 
-$py.run('import numpy as np');
-$py.run('import pandas as pd');
+class Py {
+    my  Py $instance;
+    has Inline::Python $.py;
 
-#[
+    method new {!!!}
+
+    submethod instance {
+	unless $instance {
+            $instance = Py.bless( py => Inline::Python.new ); 
+	    $instance.py.run('import numpy as np');
+	    $instance.py.run('import pandas as pd');
+	}
+        $instance;
+    }
+}
+#]
+
 role Series is export {
+    has $!.py = Inline::Python.new; #each instance has own Python context
+    has $.ps; 
+
+    ### Constructors ###
+
+#`[[
+    # Positional data array arg => redispatch as Named
+    multi method new( @data, *%h ) {
+        samewith( :@data, |%h )
+    }
+    # Positional data scalar arg => redispatch as Named
+    multi method new( $data, *%h ) {
+        samewith( :$data, |%h )
+    }
+    # accept index as List, make Hash
+    multi method new( List:D :$index, *%h ) {
+        samewith( index => $index.map({ $_ => $++ }).Hash, |%h )
+    }
+    # Real (scalar) data arg => populate Array & redispatch
+    multi method new( Real:D :$data, :$index, *%h ) {
+        die "index required if data ~~ Real" unless $index;
+        samewith( data => ($data xx $index.elems).Array, :$index, |%h )
+    }
+
+    # Str (scalar) data arg => populate Array & redispatch
+    multi method new( Str:D :$data, :$index, *%h ) {
+        die "index required if data ~~ Str" unless $index;
+        samewith( data => ($data xx $index.elems).Array, :$index, |%h )
+    }
+
+    # Date (scalar) data arg => populate Array & redispatch
+    multi method new( Date:D :$data, :$index, *%h ) {
+        die "index required if data ~~ Date" unless $index;
+        samewith( data => ($data xx $index.elems).Array, :$index, |%h )
+    }
+
+    # provide ^name of type object eg. for output
+    multi method dtype {
+        $!dtype.^name       
+    }
+#]]
+
+    method TWEAK { 
+	$!py = Py.instance.py;
+    }
 
     method yo { 
-        $py.run('print("hello world")');
-	#say my $ps = EVAL('pd.Series([1, 3, 5, np.nan, 6, 8])', :lang<Python>);
+	dd $!ps = EVAL('pd.Series([1, 3, 5, np.nan, 6, 8])', :lang<Python>);
+
+	dd my $x = $!py.run("pd.Series([1, 3, 5, np.nan, 6, 8])");
+ 
+	#dd my $y = $!py.call(pd.Series([1, 3, 5, np.nan, 6, 8])
+
+$!py.run('
+def test():
+    print("ok 1 - executing a parameterless function without return value")
+    return;
+def test_int_params(a, b):
+    if a == 2 and b == 1:
+        print("ok 2 - int params")
+    else:
+        print("not ok 2 - int params")
+    return;
+def test_str_params(a, b, i):
+    if a == "Hello" and b == "Python":
+        print("ok %i - str params" % i)
+    else:
+        print("not ok %i - str params" % i)
+    return;
+def test_int_retval():
+    return 1;
+def test_int_retvals():
+    return 3, 1, 2;
+def test_str_retval():
+    return u"Hello Perl 6!";
+def test_mixed_retvals():
+    return (u"Hello", u"Perl", 6);
+def test_none(undef):
+    return undef is None;
+def test_hash(h):
+    return (
+        isinstance(h, dict)
+        and len(h.keys()) == 2
+        and "a" in h
+        and "b" in h
+        and h["a"] == 2
+        and isinstance(h["b"], dict)
+        and isinstance(h["b"]["c"], list)
+        and len(h["b"]["c"]) == 2
+        and h["b"]["c"][0] == 4
+        and h["b"]["c"][1] == 3
+    )
+def test_foo(foo):
+    return foo.test();
+class Foo:
+    def __init__(self, val):
+        self.val = val
+    def test(self):
+        return self.val
+    def sum(self, a, b):
+        return a + b
+');
+
+        $!py.run('print("hello world")');
+
+	dd $!py.call('__main__', 'test_hash', ${a => 2, b => {c => [4, 3]}});
+	dd $!py.call('__main__', 'print(test_hash)');
+	
 	"wo" 
     }
 
+#`[[
+    method TWEAK {
+        # make index & data from %(index => data) Hash
+        if @.data.first ~~ Pair {
+            die "index not permitted if data is Array of Pairs" if %.index;
+
+            @.data = gather {
+                for @.data -> $p {
+                    take $p.value;
+                    %.index{$p.key} = $++;
+                }
+            }.Array
+
+        # make index Hash (index => pos)
+        } else {
+            die "index.elems != data.elems" if ( %.index && %.index.elems != @.data.elems );
+
+            if ! %.index {
+                my $i = 0;
+                %.index{~$i} = $i++ for ^@.data
+            }
+        }
+
+        # auto set dtype if not set from args
+        if $.dtype eq 'Any' {       #can't use !~~ Any since always False
+
+            my %dtypes = (); 
+            for @.data -> $d {
+                %dtypes{$d.^name} = 1;
+            }
+
+            given %dtypes.keys.any {
+                # if any are Str/Date, then whole Series must be
+                when 'Str'  { 
+                    $!dtype = Str;
+                    die "Cannot mix other dtypes with Str!" unless %dtypes.keys.all ~~ 'Str'
+                }
+                when 'Date' { 
+                    $!dtype = Date;
+                    die "Cannot mix other dtypes with Date!" unless %dtypes.keys.all ~~ 'Date'
+                }
+
+                # Real types are handled in descending sequence
+                when 'Num'  { $!dtype = Num }
+                when 'Rat'  { $!dtype = Rat }
+                when 'Int'  { $!dtype = Int }
+                when 'Bool' { $!dtype = Bool }
+            }
+        }
+    }
+#]]
 	
 }
 
 role DataFrame is export {
 
 }
-#]
 
 
 #`[[

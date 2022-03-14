@@ -1,5 +1,4 @@
 #!/usr/bin/env raku
-use MONKEY-SEE-NO-EVAL;
 
 use lib '../lib';
 use lib '../../raku-dan/lib';
