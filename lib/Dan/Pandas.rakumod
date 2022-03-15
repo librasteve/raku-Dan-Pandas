@@ -76,6 +76,11 @@ role Series does Dan::Pandas::DataSlice is export {
 	   $args ~= ", index=['{$.ix.join("', '")}']" if %.index; 	
 	   $args ~= ", name=\"$.name\""   	      if $.name;
 
+# since Inline::Python will not pass a Series class back and forth
+# we make and instantiate a standard container class RakuSeries
+# and populate methods over in Python to condition the returns as 
+# supported datastypes (Int, Str, Array, Hash, etc)
+
 my $py-str = qq{
 
 class RakuSeries:
@@ -88,6 +93,9 @@ class RakuSeries:
 
     def rs_dtype(self):
         return(str(self.series.dtype.type))
+
+    def rs_index(self):
+        return(self.series.index)
 
 };
 
@@ -103,18 +111,11 @@ class RakuSeries:
 	$!ps.rs_dtype()
     }
 
-    method yo { 
-	#$!py.call('__main__', 'RakuSeries').rs_str();
-	#$!ps.rs_str
-        #$!py.call('__main__', 'RakuSeries').dtype();
-
-	#dd my $c = $!ps.dtype();
-	
-	#say $!py.call('__main__', 'rs_dtype', $!ps);
-
-	"wo" 
+    multi method indexx {
+	$!ps.rs_index()
     }
 
+#iamerejh
 
     #### MAC Methods #####
     #Moves, Adds, Changes#
