@@ -9,18 +9,18 @@ sub sbv( %h --> Seq ) is export(:ALL) {
 }
 
 role DataSlice does Positional does Iterable is export(:ALL) {
-    has Str     $.name is rw = 'anon';
+    has Str     $.name is rw = '';
     has Any     @.data;
     has Int     %.index;
 }
 
 role Series does Dan::Pandas::DataSlice is export {
-    has Any:U   $.dtype;                  #ie. type object
-
     has $!py = Inline::Python.new; 	  #each instance has own Python context
     has $!ps;				  #each instance has own Python Series obj 
 
     ### Constructors ###
+
+    ##NB. not possible to define dtype (will be auto-set by Python)
 
     # accept data as Positional Array arg, redispatch as Named
     multi method new( @data, *%h ) {
@@ -31,7 +31,7 @@ role Series does Dan::Pandas::DataSlice is export {
         samewith( index => $index.map({ $_ => $++ }).Hash, |%h )
     }
 
-#`[[
+#`[[ TODO
     # Positional data scalar arg => redispatch as Named
     multi method new( $data, *%h ) {
         samewith( :$data, |%h )
@@ -51,58 +51,67 @@ role Series does Dan::Pandas::DataSlice is export {
         die "index required if data ~~ Date" unless $index;
         samewith( data => ($data xx $index.elems).Array, :$index, |%h )
     }
-
-    # provide ^name of type object eg. for output
-    multi method dtype {
-        $!dtype.^name       
-    }
 #]]
 
     method TWEAK {
+        # make index & data from %(index => data) Hash
+        if @.data.first ~~ Pair {
+            die "index not permitted if data is Array of Pairs" if %.index;
+
+            @.data = gather {
+                for @.data -> $p {
+                    take $p.value;
+                    %.index{$p.key} = $++;
+                }
+            }.Array
+	}
+
+	# and then use attrs to set up Python Series object
+
         $!py.run('import numpy as np');
         $!py.run('import pandas as pd');
 
-	my $data  = "[{@.data.join(', ')}]";
-	   $data ~~ s/NaN/np.nan/;
-	my $index = "index=['{$.ix.join("', '")}']"; 	
-	my $name  = "name=\"$.name\"" if $.name;
-	my $dtype = "dtype=\"$.dtype\"" if $.dtype;
+	my $args  = "[{@.data.join(', ')}]";
+	   $args ~~ s/NaN/np.nan/;
+	   $args ~= ", index=['{$.ix.join("', '")}']" if %.index; 	
+	   $args ~= ", name=\"$.name\""   	      if $.name;
 
-$!py.run(qq{
+my $py-str = qq{
+
 class RakuSeries:
     def __init__(self):
-        self.series = pd.Series($data, $index, $name)
-        self.string = str(self.series)
-        #print(self.string)
-    def say(self):
-        return(str(self.series))
-        #return(self.string)
-    def dtype(self):
-        print(self.series.dtype.str)
-        return(self.series.dtype.str)
-def rs_str(series):
-    return(str(series))
-    #return(series.string)
-def rs_dtype(series):
-    return(series.dtype())
-});
+        self.series = pd.Series($args)
+        #print(self.series)
 
+    def rs_str(self):
+        return(str(self.series))
+
+    def rs_dtype(self):
+        return(str(self.series.dtype.type))
+
+};
+
+	$!py.run($py-str);
 	$!ps = $!py.call('__main__', 'RakuSeries');
     }
 
     method Str { 
-#iamerejh
-	#dd $!ps.dtype();
-	#say $!py.call('__main__', 'rs_dtype', $!ps);
-	say $!py.call('__main__', 'rs_str', $!ps);
+	$!ps.rs_str()
+    }
 
+    method dtype {
+	$!ps.rs_dtype()
+    }
 
-
-	#say $!py.call('__main__', 'RakuSeries').print();
+    method yo { 
+	#$!py.call('__main__', 'RakuSeries').rs_str();
+	#$!ps.rs_str
         #$!py.call('__main__', 'RakuSeries').dtype();
-	#$!ps.print();
+
 	#dd my $c = $!ps.dtype();
 	
+	#say $!py.call('__main__', 'rs_dtype', $!ps);
+
 	"wo" 
     }
 
@@ -121,58 +130,6 @@ def rs_dtype(series):
         @new-index.map:   { %.index{$_} = $++  };
     }
 
-#`[[
-    method TWEAK {
-        # make index & data from %(index => data) Hash
-        if @.data.first ~~ Pair {
-            die "index not permitted if data is Array of Pairs" if %.index;
-
-            @.data = gather {
-                for @.data -> $p {
-                    take $p.value;
-                    %.index{$p.key} = $++;
-                }
-            }.Array
-
-        # make index Hash (index => pos)
-        } else {
-            die "index.elems != data.elems" if ( %.index && %.index.elems != @.data.elems );
-
-            if ! %.index {
-                my $i = 0;
-                %.index{~$i} = $i++ for ^@.data
-            }
-        }
-
-        # auto set dtype if not set from args
-        if $.dtype eq 'Any' {       #can't use !~~ Any since always False
-
-            my %dtypes = (); 
-            for @.data -> $d {
-                %dtypes{$d.^name} = 1;
-            }
-
-            given %dtypes.keys.any {
-                # if any are Str/Date, then whole Series must be
-                when 'Str'  { 
-                    $!dtype = Str;
-                    die "Cannot mix other dtypes with Str!" unless %dtypes.keys.all ~~ 'Str'
-                }
-                when 'Date' { 
-                    $!dtype = Date;
-                    die "Cannot mix other dtypes with Date!" unless %dtypes.keys.all ~~ 'Date'
-                }
-
-                # Real types are handled in descending sequence
-                when 'Num'  { $!dtype = Num }
-                when 'Rat'  { $!dtype = Rat }
-                when 'Int'  { $!dtype = Int }
-                when 'Bool' { $!dtype = Bool }
-            }
-        }
-    }
-#]]
-	
 }
 
 role DataFrame is export {
