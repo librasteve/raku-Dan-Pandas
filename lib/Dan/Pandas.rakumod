@@ -8,15 +8,23 @@ sub sbv( %h --> Seq ) is export(:ALL) {
     %h.sort(*.value).map(*.key)
 }
 
-role DataSlice does Positional does Iterable is export(:ALL) {
+role Series is export {
+    # unlike Dan::Series, not doing DataSlice as role due to TWEAK phase constraints
+    # TODO review Dan::Series to better align codebases
+
     has Str     $.name is rw = '';
     has Any     @.data;
-    has Int     %.index;
-}
+    has Int     %!index;
 
-role Series does Dan::Pandas::DataSlice is export {
     has $!py = Inline::Python.new; 	  #each instance has own Python context
     has $!ps;				  #each instance has own Python Series obj 
+
+    multi method index {
+	%!index 
+    }
+    multi method index( Hash:D %index ) {
+	%!index = %index 
+    }
 
     ### Constructors ###
 
@@ -61,7 +69,7 @@ role Series does Dan::Pandas::DataSlice is export {
             @.data = gather {
                 for @.data -> $p {
                     take $p.value;
-                    %.index{$p.key} = $++;
+                    %!index{$p.key} = $++
                 }
             }.Array
 	}
@@ -111,8 +119,9 @@ class RakuSeries:
 	$!ps.rs_dtype()
     }
 
-    multi method indexx {
-	$!ps.rs_index()
+    multi method index {
+	$!ps.rs_index() with $!ps;
+	nextsame
     }
 
 #iamerejh

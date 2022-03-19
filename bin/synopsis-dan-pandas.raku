@@ -13,7 +13,5 @@ my \s = $;
 s = Series.new( [b=>1, a=>0, c=>2] );               #from Array of Pairs
 say ~s;
 say s.dtype;
-say s.indexx;
-
-
+say s.index;
 
