@@ -1,5 +1,14 @@
 unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 
+#`[TODOs
+-Series
+-- accessors
+-- Pandas methods
+-- sync/refresh (ie to Raku side attrs)
+
+
+#]
+
 use Dan;
 use Inline::Python;
 
@@ -12,38 +21,33 @@ role Series is export {
     # unlike Dan::Series, not doing DataSlice as role due to TWEAK phase constraints
     # TODO review Dan::Series to better align codebases
 
-    has Str     $.name is rw = '';
-    has Any     @.data;
+    has Str	$!name;
+    has Any     @!data;
     has Int     %!index;
 
     has $!py = Inline::Python.new; 	  #each instance has own Python context
     has $!ps;				  #each instance has own Python Series obj 
 
-    multi method index {
-	%!index 
-    }
-    multi method index( Hash:D %index ) {
-	%!index = %index 
-    }
-
     ### Constructors ###
 
-    ##NB. not possible to define dtype (will be auto-set by Python)
-
-    # accept data as Positional Array arg, redispatch as Named
     multi method new( @data, *%h ) {
         samewith( :@data, |%h )
     }
-    # accept index as List, make Hash
-    multi method new( List:D :$index, *%h ) {
-        samewith( index => $index.map({ $_ => $++ }).Hash, |%h )
+
+    submethod BUILD( :$name, :@data, :$index ) {
+        $!name  = $name // 'anon';
+	@!data  = @data;
+
+	if $index {
+            if $index !~~ Hash {
+                %!index = $index.map({ $_ => $++ }).Hash
+	    } else {
+	        %!index = $index
+	    }
+	}
     }
 
 #`[[ TODO
-    # Positional data scalar arg => redispatch as Named
-    multi method new( $data, *%h ) {
-        samewith( :$data, |%h )
-    }
     # Real (scalar) data arg => populate Array & redispatch
     multi method new( Real:D :$data, :$index, *%h ) {
         die "index required if data ~~ Real" unless $index;
@@ -62,30 +66,39 @@ role Series is export {
 #]]
 
     method TWEAK {
-        # make index & data from %(index => data) Hash
-        if @.data.first ~~ Pair {
-            die "index not permitted if data is Array of Pairs" if %.index;
 
-            @.data = gather {
-                for @.data -> $p {
+        if @!data.first ~~ Pair {
+            die "index not permitted if data is Array of Pairs" if %!index;
+
+            @!data = gather {
+                for @!data -> $p {
                     take $p.value;
                     %!index{$p.key} = $++
                 }
             }.Array
 	}
 
+	if ! %!index {
+	    %!index = gather {
+		for 0..^@!data {
+		    take ( $_ => $_ )
+		}
+	    }.Hash
+	}
+  
 	# and then use attrs to set up Python Series object
 
         $!py.run('import numpy as np');
         $!py.run('import pandas as pd');
 
-	my $args  = "[{@.data.join(', ')}]";
-	   $args ~~ s/NaN/np.nan/;
-	   $args ~= ", index=['{$.ix.join("', '")}']" if %.index; 	
-	   $args ~= ", name=\"$.name\""   	      if $.name;
+	my $args  = "[{@!data.join(', ')}]";
+	   $args ~~ s:g/NaN/np.nan/;
+	   $args ~= ", index=['{%!index.&sbv.join("', '")}']"   if %!index; 	
+	   $args ~= ", name=\"$!name\""   	      		if $!name;
+dd $args;
 
 # since Inline::Python will not pass a Series class back and forth
-# we make and instantiate a standard container class RakuSeries
+# we make and instantiate a standard class 'RakuSeries' as container
 # and populate methods over in Python to condition the returns as 
 # supported datastypes (Int, Str, Array, Hash, etc)
 
@@ -105,6 +118,12 @@ class RakuSeries:
     def rs_index(self):
         return(self.series.index)
 
+    def rs_reindex(self, new_index):
+        result = self.series.reindex(new_index)
+        #print(result)
+        return(result)
+        #return(self.series.reindex(new_index))
+
 };
 
 	$!py.run($py-str);
@@ -120,11 +139,9 @@ class RakuSeries:
     }
 
     multi method index {
-	$!ps.rs_index() with $!ps;
-	nextsame
+	return $!ps.rs_index() with $!ps;
+	%!index
     }
-
-#iamerejh
 
     #### MAC Methods #####
     #Moves, Adds, Changes#
@@ -134,10 +151,68 @@ class RakuSeries:
         %.index.&sbv
     }
 
-    #| set (re)index from Array
-    multi method ix( @new-index ) {
-        %.index.keys.map: { %.index{$_}:delete };
-        @new-index.map:   { %.index{$_} = $++  };
+    #| set index directly from Array (Dan::Series style) 
+    multi method ix( $new-index ) {
+	$!ps.rs_reindex( $new-index )
+    }
+
+    #| reindex from Array (Pandas style)
+    method reindex( @index ) {
+	my $rese  = $!ps.rs_reindex( $@index );
+	dd my @data  = $rese.values; 
+	dd @index;
+	dd Series.new( :@data, index => ["d", "e", "f", "g", "h", "i"] )
+    }
+
+#iamerejh
+
+    ### Role Support ###
+
+    # Positional role support 
+    # viz. https://docs.raku.org/type/Positional
+
+    method of {
+        Any
+    }
+    method elems {
+        @!data.elems
+    }
+    method AT-POS( $p ) {
+        @!data[$p]
+    }
+    method EXISTS-POS( $p ) {
+        0 <= $p < @!data.elems ?? True !! False
+    }
+
+    # Iterable role support 
+    # viz. https://docs.raku.org/type/Iterable
+
+    method iterator {
+        @!data.iterator
+    }
+    method flat {
+        @!data.flat
+    }
+    method lazy {
+        @!data.lazy
+    }
+    method hyper {
+        @!data.hyper
+    }
+
+    # LIMITED Associative role support 
+    # viz. https://docs.raku.org/type/Associative
+    # DataSlice just implements the Assoc. methods, but does not do the Assoc. role
+    # ...thus very limited support for Assoc. accessors (to ensure Positional Hyper methods win)
+
+    method keyof {
+        Str(Any) 
+    }
+    method AT-KEY( $k ) {
+        @!data[%.index{$k}]
+    }
+    method EXISTS-KEY( $k ) {
+        %.index{$k}:exists
     }
 
 }
@@ -412,7 +487,8 @@ role Series does DataSlice is export(:ALL) {
         }
     }
 
-    ### Mezzanine methods ###  (these use Accessors)
+    ### Mezzanine methods ###  
+    # (these use Accessors) #
 
     method count { 
         $.elems 
