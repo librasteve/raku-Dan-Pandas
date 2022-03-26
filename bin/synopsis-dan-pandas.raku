@@ -10,22 +10,24 @@ my \s = $;
 #s = Series.new(data => [1, 3, 5, NaN, 6, 8], :$index, name => 'john' );
 #s = Series.new(data => [1, 3, 5, NaN, 6, 8], index => <a b c d e f>, name => 'john' );
 #s = Series.new(data => [1, 3, 5, NaN, 6, 8]);
-s = Series.new([1, 3, 5, 6, 8]);
+#s = Series.new([1, 3, 5, 6, 8]);
 #s = Series.new([1, 3, 5, NaN, 6, 8]);
-#s = Series.new( [rand xx 5], index => <a b c d e>);
+s = Series.new( [rand xx 5], index => <a b c d e>);
 #s = Series.new( [b=>1, a=>0, c=>2] );               #from Array of Pairs
 
 #say s.dtype;
 #say s.ix;
 #say s.index;
 #say ~s.reindex(['d','e','f','g','h','i']);
-
 #say s.elems;
-say s.load;
-say s.map(*+2);
+
+#say s.load;
+#say s.map(*+2);
 #say [+] s; 
 #say s >>+>> 2; 
-say ~s;
-say s[2];
-#say s<c>;
+#say s >>+<< s; 
 
+say s[2];
+say s<c>;
+
+say ~s;

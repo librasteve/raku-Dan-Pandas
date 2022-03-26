@@ -18,7 +18,7 @@ sub sbv( %h --> Seq ) is export(:ALL) {
     %h.sort(*.value).map(*.key)
 }
 
-role Series is export {
+role Series does Positional does Iterable is export {
     # TODO review Dan::Series to better align codebases
     # unlike Dan::Series, not doing DataSlice as role due to TWEAK phase constraints
 
@@ -135,12 +135,15 @@ class RakuSeries:
     def rs_size(self):
         return(self.series.size)
 
-    def rs_iloc(self, pos):
-        result = self.series.iloc[pos]
+    def rs_values(self):
+        array = self.series.values
+        result = array.tolist()
         return(result)
 
-    def rs_array(self):
-        return(self.series.array)
+    def rs_iloc(self, pos):
+        result = self.series.iloc[pos]
+        print(result)
+        return(result)
 
 };
 
@@ -175,7 +178,7 @@ class RakuSeries:
     #| set raku attrs to rs_array / rs_index
     method load {
 	%!index = $.index;
-	@!data = $!ps.rs_array;
+	@!data = $!ps.rs_values;
     }
 
     #### MAC Methods #####
@@ -207,7 +210,8 @@ class RakuSeries:
 	$!ps.rs_size()
     }
     method AT-POS( $p ) {
-	$!ps.rs_iloc( $p )
+	$.load;
+        @!data[$p]
     }
     method EXISTS-POS( $p ) {
         0 <= $p < self.elems ?? True !! False
@@ -242,9 +246,11 @@ class RakuSeries:
         Str(Any) 
     }
     method AT-KEY( $k ) {
+	$.load;
         @!data[%.index{$k}]
     }
     method EXISTS-KEY( $k ) {
+	$.load;
         %.index{$k}:exists
     }
 
