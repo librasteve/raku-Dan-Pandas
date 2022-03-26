@@ -22,7 +22,7 @@ role Series is export {
     # TODO review Dan::Series to better align codebases
     # unlike Dan::Series, not doing DataSlice as role due to TWEAK phase constraints
 
-    ## attrs for set up and import/export - not guaranteed to match Python side ##
+    ## attrs for set up and load/store - not synched to Python side ##
     has Str	$!name;
     has Any     @!data;
     has Int     %!index;
@@ -106,6 +106,7 @@ role Series is export {
 	   $args ~= ", index=['{%!index.&sbv.join("', '")}']"   if %!index; 	
 	   $args ~= ", name=\"$!name\""   	      		if $!name;
 
+
 # since Inline::Python will not pass a Series class back and forth
 # we make and instantiate a standard class 'RakuSeries' as container
 # and populate methods over in Python to condition the returns as 
@@ -130,6 +131,16 @@ class RakuSeries:
     def rs_reindex(self, new_index):
         result = self.series.reindex(new_index)
         return(result)
+
+    def rs_size(self):
+        return(self.series.size)
+
+    def rs_iloc(self, pos):
+        result = self.series.iloc[pos]
+        return(result)
+
+    def rs_array(self):
+        return(self.series.array)
 
 };
 
@@ -158,6 +169,15 @@ class RakuSeries:
 	$!ps.rs_index()
     }
 
+    #### Sync Methods #####
+    #### Load & Store #####
+
+    #| set raku attrs to rs_array / rs_index
+    method load {
+	%!index = $.index;
+	@!data = $!ps.rs_array;
+    }
+
     #### MAC Methods #####
     #Moves, Adds, Changes#
 
@@ -184,28 +204,32 @@ class RakuSeries:
         Any
     }
     method elems {
-        @!data.elems
+	$!ps.rs_size()
     }
     method AT-POS( $p ) {
-        @!data[$p]
+	$!ps.rs_iloc( $p )
     }
     method EXISTS-POS( $p ) {
-        0 <= $p < @!data.elems ?? True !! False
+        0 <= $p < self.elems ?? True !! False
     }
 
     # Iterable role support 
     # viz. https://docs.raku.org/type/Iterable
 
     method iterator {
+	$.load;
         @!data.iterator
     }
     method flat {
+	$.load;
         @!data.flat
     }
     method lazy {
+	$.load;
         @!data.lazy
     }
     method hyper {
+	$.load;
         @!data.hyper
     }
 
