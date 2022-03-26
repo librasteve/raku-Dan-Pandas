@@ -5,6 +5,7 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 -- accessors
 -- Pandas methods
 -- sync/refresh (ie to Raku side attrs)
+-- ix index behaviour (adjust Dan::Series)
 
 
 #]
@@ -18,9 +19,10 @@ sub sbv( %h --> Seq ) is export(:ALL) {
 }
 
 role Series is export {
-    # unlike Dan::Series, not doing DataSlice as role due to TWEAK phase constraints
     # TODO review Dan::Series to better align codebases
+    # unlike Dan::Series, not doing DataSlice as role due to TWEAK phase constraints
 
+    ## attrs for set up and import/export - not guaranteed to match Python side ##
     has Str	$!name;
     has Any     @!data;
     has Int     %!index;
@@ -29,45 +31,51 @@ role Series is export {
     has $!ps;				  #each instance has own Python Series obj 
 
     ### Constructors ###
-
+ 
+    # Positional data array arg => redispatch as Named
     multi method new( @data, *%h ) {
         samewith( :@data, |%h )
     }
 
+    # Real (scalar) data arg => populate Array & redispatch
+    multi method new( Real:D :$data, :$index, *%h ) {
+        die "index required if data ~~ Real" unless $index;
+        samewith( data => ($data xx $index.elems).Array, :$index, |%h )
+    }
+
+    # Str (scalar) data arg => populate Array & redispatch
+    multi method new( Str:D :$data, :$index, *%h ) {
+        die "index required if data ~~ Str" unless $index;
+        samewith( data => ($data xx $index.elems).Array, :$index, |%h )
+    }
+
+    # Date (scalar) data arg => populate Array & redispatch
+    multi method new( Date:D :$data, :$index, *%h ) {
+        die "index required if data ~~ Date" unless $index;
+        samewith( data => ($data xx $index.elems).Array, :$index, |%h )
+    }
+
+
     submethod BUILD( :$name, :@data, :$index ) {
-        $!name  = $name // 'anon';
-	@!data  = @data;
+        $!name = $name // 'anon';
+	@!data = @data;
 
 	if $index {
             if $index !~~ Hash {
-                %!index = $index.map({ $_ => $++ }).Hash
+                %!index = $index.map({ $_ => $++ })
 	    } else {
 	        %!index = $index
 	    }
 	}
     }
 
-#`[[ TODO
-    # Real (scalar) data arg => populate Array & redispatch
-    multi method new( Real:D :$data, :$index, *%h ) {
-        die "index required if data ~~ Real" unless $index;
-        samewith( data => ($data xx $index.elems).Array, :$index, |%h )
-    }
-    # Str (scalar) data arg => populate Array & redispatch
-    multi method new( Str:D :$data, :$index, *%h ) {
-        die "index required if data ~~ Str" unless $index;
-        samewith( data => ($data xx $index.elems).Array, :$index, |%h )
-    }
-    # Date (scalar) data arg => populate Array & redispatch
-    multi method new( Date:D :$data, :$index, *%h ) {
-        die "index required if data ~~ Date" unless $index;
-        samewith( data => ($data xx $index.elems).Array, :$index, |%h )
-    }
-#]]
 
     method TWEAK {
 
+	# handle data => Array of Pairs 
+
         if @!data.first ~~ Pair {
+
             die "index not permitted if data is Array of Pairs" if %!index;
 
             @!data = gather {
@@ -78,6 +86,8 @@ role Series is export {
             }.Array
 	}
 
+	# handle implicit index
+
 	if ! %!index {
 	    %!index = gather {
 		for 0..^@!data {
@@ -86,7 +96,7 @@ role Series is export {
 	    }.Hash
 	}
   
-	# and then use attrs to set up Python Series object
+	# set up Python Series object from attrs
 
         $!py.run('import numpy as np');
         $!py.run('import pandas as pd');
@@ -95,7 +105,6 @@ role Series is export {
 	   $args ~~ s:g/NaN/np.nan/;
 	   $args ~= ", index=['{%!index.&sbv.join("', '")}']"   if %!index; 	
 	   $args ~= ", name=\"$!name\""   	      		if $!name;
-dd $args;
 
 # since Inline::Python will not pass a Series class back and forth
 # we make and instantiate a standard class 'RakuSeries' as container
@@ -120,15 +129,15 @@ class RakuSeries:
 
     def rs_reindex(self, new_index):
         result = self.series.reindex(new_index)
-        #print(result)
         return(result)
-        #return(self.series.reindex(new_index))
 
 };
 
 	$!py.run($py-str);
 	$!ps = $!py.call('__main__', 'RakuSeries');
     }
+
+    #### Info Methods #####
 
     method Str { 
 	$!ps.rs_str()
@@ -138,20 +147,23 @@ class RakuSeries:
 	$!ps.rs_dtype()
     }
 
-    multi method index {
-	return $!ps.rs_index() with $!ps;
-	%!index
+    #| get index as Hash
+    method index {
+	my @keys = $!ps.rs_index();
+        @keys.map({ $_ => $++ }).Hash
+    }
+
+    #| get index as Array
+    multi method ix {
+	$!ps.rs_index()
     }
 
     #### MAC Methods #####
     #Moves, Adds, Changes#
 
-    #| get index as Array (ordered by %.index.values)
-    multi method ix {
-        %.index.&sbv
-    }
+    # TODO - adjust Dan::Series bahaviour to match Pandas (same API)
 
-    #| set index directly from Array (Dan::Series style) 
+    #| set index from Array (Dan::Series style) 
     multi method ix( $new-index ) {
 	$!ps.rs_reindex( $new-index )
     }
@@ -159,12 +171,9 @@ class RakuSeries:
     #| reindex from Array (Pandas style)
     method reindex( @index ) {
 	my $rese  = $!ps.rs_reindex( $@index );
-	dd my @data  = $rese.values; 
-	dd @index;
-	dd Series.new( :@data, index => ["d", "e", "f", "g", "h", "i"] )
+	my @data  = $rese.values; 
+	Series.new( :@data, :@index )
     }
-
-#iamerejh
 
     ### Role Support ###
 
