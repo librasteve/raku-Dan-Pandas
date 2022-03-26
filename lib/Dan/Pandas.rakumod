@@ -140,10 +140,9 @@ class RakuSeries:
         result = array.tolist()
         return(result)
 
-    def rs_iloc(self, pos):
-        result = self.series.iloc[pos]
-        print(result)
-        return(result)
+    def rs_eval(self, exp):
+        result = eval('self.series' + exp)
+        print(result) 
 
 };
 
@@ -196,6 +195,12 @@ class RakuSeries:
 	my $rese  = $!ps.rs_reindex( $@index );
 	my @data  = $rese.values; 
 	Series.new( :@data, :@index )
+    }
+
+    ### Pandas Methods ###
+
+    method pd( $exp ) {
+	$!ps.rs_eval( $exp )
     }
 
     ### Role Support ###

@@ -21,7 +21,7 @@ s = Series.new( [rand xx 5], index => <a b c d e>);
 #say ~s.reindex(['d','e','f','g','h','i']);
 #say s.elems;
 
-#say s.load;
+say s.load;
 #say s.map(*+2);
 #say [+] s; 
 #say s >>+>> 2; 
@@ -31,3 +31,8 @@ say s[2];
 say s<c>;
 
 say ~s;
+
+s.pd: '.shape';
+s.pd: '.flags';
+s.pd: '.T';
+s.pd: '.to_excel("test.xlsx")';
