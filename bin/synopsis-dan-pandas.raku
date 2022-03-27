@@ -20,8 +20,8 @@ s = Series.new( [rand xx 5], index => <a b c d e>);
 #say s.index;
 #say ~s.reindex(['d','e','f','g','h','i']);
 #say s.elems;
+#say s.reload;
 
-say s.load;
 #say s.map(*+2);
 #say [+] s; 
 #say s >>+>> 2; 
@@ -32,7 +32,20 @@ say s<c>;
 
 say ~s;
 
+#`[ pd methods
 s.pd: '.shape';
 s.pd: '.flags';
 s.pd: '.T';
-s.pd: '.to_excel("test.xlsx")';
+s.pd: '.to_json("test.json")';
+s.pd: '.to_csv("test.csv")';
+#]
+s.pd: '.iloc[2] = 23';
+s.pd: '.iloc[2]';
+
+die;
+
+s.splice(1,2,(j=>3)); 
+s.fillna;
+
+my \t = Series.new( [f=>1, e=>0, d=>2] );
+s.concat: t;

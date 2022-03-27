@@ -4,10 +4,17 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 -Series
 -- accessors
 -- Pandas methods
--- sync/refresh (ie to Raku side attrs)
--- ix index behaviour (adjust Dan::Series)
-
-
+-- reload (to Raku-side attrs)
+-- splice
+-- concat
+-- coerce to Dan::Series (.Dan::Series)
+-- new from Dan::Series
+-- 2-arity eval
+DONE
+-- ix index behaviour
+-- duplicate keys
+-- disjoint keys
+-- review Dan::Series to better align codebases
 #]
 
 use Dan;
@@ -19,10 +26,8 @@ sub sbv( %h --> Seq ) is export(:ALL) {
 }
 
 role Series does Positional does Iterable is export {
-    # TODO review Dan::Series to better align codebases
-    # unlike Dan::Series, not doing DataSlice as role due to TWEAK phase constraints
 
-    ## attrs for set up and load/store - not synched to Python side ##
+    ## attrs for construct and reload only: not synched to Python side ##
     has Str	$!name;
     has Any     @!data;
     has Int     %!index;
@@ -144,6 +149,9 @@ class RakuSeries:
         result = eval('self.series' + exp)
         print(result) 
 
+    def rs_exec(self, exp):
+        exec('self.series' + exp)
+
 };
 
 	$!py.run($py-str);
@@ -183,7 +191,7 @@ class RakuSeries:
     #### MAC Methods #####
     #Moves, Adds, Changes#
 
-    # TODO - adjust Dan::Series bahaviour to match Pandas (same API)
+    # TODO - adjust Dan::Series index / ix behaviour to match Pandas (same API)
 
     #| set index from Array (Dan::Series style) 
     multi method ix( $new-index ) {
@@ -200,7 +208,11 @@ class RakuSeries:
     ### Pandas Methods ###
 
     method pd( $exp ) {
-	$!ps.rs_eval( $exp )
+	if $exp ~~ /'='/ {
+	    $!ps.rs_exec( $exp )
+	} else {
+	    $!ps.rs_eval( $exp )
+	}
     }
 
     ### Role Support ###
