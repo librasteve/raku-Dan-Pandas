@@ -4,7 +4,7 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 -Series
 -- accessors
 -- Pandas methods
--- reload (to Raku-side attrs)
+-- pull (to Raku-side attrs)
 -- splice
 -- concat
 -- coerce to Dan::Series (.Dan::Series)
@@ -27,11 +27,12 @@ sub sbv( %h --> Seq ) is export(:ALL) {
 
 role Series does Positional does Iterable is export {
 
-    ## attrs for construct and reload only: not synched to Python side ##
+    ## attrs for construct and pull only: not synched to Python side ##
     has Str	$!name;
     has Any     @!data;
     has Int     %!index;
 
+#FIXME - make py a class attr
     has $!py = Inline::Python.new; 	  #each instance has own Python context
     has $!ps;				  #each instance has own Python Series obj 
 
@@ -74,6 +75,14 @@ role Series does Positional does Iterable is export {
 	}
     }
 
+    method prep-args {
+
+	my $args  = "[{@!data.join(', ')}]";
+	   $args ~~ s:g/NaN/np.nan/;
+	   $args ~= ", index=['{%!index.&sbv.join("', '")}']"   if %!index; 	
+	   $args ~= ", name=\"$!name\""   	      		if $!name;
+
+    }
 
     method TWEAK {
 
@@ -103,14 +112,11 @@ role Series does Positional does Iterable is export {
   
 	# set up Python Series object from attrs
 
+#FIXME move up to use ??
         $!py.run('import numpy as np');
         $!py.run('import pandas as pd');
 
-	my $args  = "[{@!data.join(', ')}]";
-	   $args ~~ s:g/NaN/np.nan/;
-	   $args ~= ", index=['{%!index.&sbv.join("', '")}']"   if %!index; 	
-	   $args ~= ", name=\"$!name\""   	      		if $!name;
-
+	my $args = self.prep-args;
 
 # since Inline::Python will not pass a Series class back and forth
 # we make and instantiate a standard class 'RakuSeries' as container
@@ -122,6 +128,7 @@ my $py-str = qq{
 class RakuSeries:
     def __init__(self):
         self.series = pd.Series($args)
+        #self.series = pd.Series($args)
         #print(self.series)
 
     def rs_str(self):
@@ -152,6 +159,9 @@ class RakuSeries:
     def rs_exec(self, exp):
         exec('self.series' + exp)
 
+    def rs_push(self, args):
+        self.series = eval('pd.Series(' + args + ')')
+
 };
 
 	$!py.run($py-str);
@@ -180,10 +190,10 @@ class RakuSeries:
     }
 
     #### Sync Methods #####
-    #### Load & Store #####
+    #### Pull & Push  #####
 
     #| set raku attrs to rs_array / rs_index
-    method load {
+    method pull {
 	%!index = $.index;
 	@!data = $!ps.rs_values;
     }
@@ -203,6 +213,53 @@ class RakuSeries:
 	my $rese  = $!ps.rs_reindex( $@index );
 	my @data  = $rese.values; 
 	Series.new( :@data, :@index )
+    }
+
+    #| get self as Array of Pairs
+    multi method aop {
+        self.ix.map({ $_ => @!data[$++] })
+    }
+
+    #| set data and index from Array of Pairs
+    multi method aop( @aop ) {
+        %!index = @aop.map({$_.key => $++});
+        @!data  = @aop.map(*.value);
+
+	my $args = self.prep-args;
+	$!ps.rs_push($args)
+    }
+
+    #| splice as Array of values or Array of Pairs
+    #| viz. https://docs.raku.org/routine/splice
+    method splice( Dan::Pandas::Series:D: $start = 0, $elems?, *@replace ) {
+        given @replace {
+            when .first ~~ Pair {
+                my @aop = self.aop;
+                my @res = @aop.splice($start, $elems//*, @replace);
+                self.aop: @aop;
+                @res
+            }
+            default {
+                my @res = @!data.splice($start, $elems//*, @replace); 
+                self.fillna; 
+                @res
+            }
+        }
+    }
+
+    #| set empty data slots to Nan
+    method fillna {
+        self.aop.grep(! *.value.defined).map({ $_.value = NaN });
+    }
+
+    #| drop index and data when Nan
+    method dropna {
+        self.aop: self.aop.grep(*.value ne NaN);
+    }
+
+    #| drop index and data when empty 
+    method dropem {
+        self.aop: self.aop.grep(*.value.defined).Array;
     }
 
     ### Pandas Methods ###
@@ -227,7 +284,7 @@ class RakuSeries:
 	$!ps.rs_size()
     }
     method AT-POS( $p ) {
-	$.load;
+	$.pull;
         @!data[$p]
     }
     method EXISTS-POS( $p ) {
@@ -238,19 +295,19 @@ class RakuSeries:
     # viz. https://docs.raku.org/type/Iterable
 
     method iterator {
-	$.load;
+	$.pull;
         @!data.iterator
     }
     method flat {
-	$.load;
+	$.pull;
         @!data.flat
     }
     method lazy {
-	$.load;
+	$.pull;
         @!data.lazy
     }
     method hyper {
-	$.load;
+	$.pull;
         @!data.hyper
     }
 
@@ -263,11 +320,11 @@ class RakuSeries:
         Str(Any) 
     }
     method AT-KEY( $k ) {
-	$.load;
+	$.pull;
         @!data[%.index{$k}]
     }
     method EXISTS-KEY( $k ) {
-	$.load;
+	$.pull;
         %.index{$k}:exists
     }
 
