@@ -48,8 +48,8 @@ s.fillna;
 
 say ~s;
 
-die;
-
-
 my \t = Series.new( [f=>1, e=>0, d=>2] );
 s.concat: t;
+
+say ~s;
+

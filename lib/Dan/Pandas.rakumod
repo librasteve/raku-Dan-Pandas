@@ -1,17 +1,20 @@
 unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 
 #`[TODOs
--Series
+- Series
 -- accessors
 -- Pandas methods
 -- pull (to Raku-side attrs)
 -- splice
+^^ DONE
 -- concat
 -- coerce to Dan::Series (.Dan::Series)
 -- new from Dan::Series
 -- 2-arity eval
-DONE
--- ix index behaviour
+- DataFrame
+-- ditto
+- Big Pic
+-- ix index reindex behaviour
 -- duplicate keys
 -- disjoint keys
 -- review Dan::Series to better align codebases
@@ -32,7 +35,7 @@ role Series does Positional does Iterable is export {
     has Any     @!data;
     has Int     %!index;
 
-#FIXME - make py a class attr
+#FIXME - make py a singleton(!) 
     has $!py = Inline::Python.new; 	  #each instance has own Python context
     has $!ps;				  #each instance has own Python Series obj 
 
@@ -217,6 +220,7 @@ class RakuSeries:
 
     #| get self as Array of Pairs
     multi method aop {
+	$.pull;
         self.ix.map({ $_ => @!data[$++] })
     }
 
@@ -260,6 +264,24 @@ class RakuSeries:
     #| drop index and data when empty 
     method dropem {
         self.aop: self.aop.grep(*.value.defined).Array;
+    }
+
+    # concat
+    method concat( Dan::Pandas::Series:D $dsr ) {
+	$.pull;
+
+        %!index.map({ 
+            if $dsr.index{$_.key}:exists {
+                warn "duplicate key {$_.key} not permitted" 
+            } 
+        });
+
+        my $start = %!index.elems;
+        my $elems = $dsr.index.elems;
+        my @replace = $dsr.aop;
+
+        self.splice: $start, $elems, @replace;    
+        self
     }
 
     ### Pandas Methods ###
