@@ -61,6 +61,11 @@ costs.pd: '.mul', prices;
 
 my \u = s.Dan-Series;
 say u.^name;
+say ~u;
+
+my \v = Series.new( u );
+say v.^name;
+say ~v;
 
 
 

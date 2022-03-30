@@ -9,8 +9,8 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 -- concat
 -- 2-arity pd methods 
 -- coerce to Dan::Series (.Dan::Series)
-^^ DONE
 -- new from Dan::Series
+^^ DONE
 - DataFrame
 -- ditto
 - Big Pic
@@ -83,6 +83,11 @@ role Series does Positional does Iterable is export {
     multi method new( Date:D :$data, :$index, *%h ) {
         die "index required if data ~~ Date" unless $index;
         samewith( data => ($data xx $index.elems).Array, :$index, |%h )
+    }
+
+    # from Dan::Series 
+    multi method new( Dan::Series:D \s ) {
+        samewith( name => s.name, data => s.data, index => s.index )
     }
 
 
