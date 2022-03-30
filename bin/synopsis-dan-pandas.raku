@@ -47,6 +47,7 @@ s.splice(1,2,(j=>3));
 s.fillna;
 
 say ~s;
+dd s.^methods;
 
 my \t = Series.new( [f=>1, e=>0, d=>2] );
 s.concat: t;

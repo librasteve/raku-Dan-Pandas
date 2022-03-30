@@ -6,8 +6,8 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 -- Pandas methods
 -- pull (to Raku-side attrs)
 -- splice
-^^ DONE
 -- concat
+^^ DONE
 -- coerce to Dan::Series (.Dan::Series)
 -- new from Dan::Series
 -- 2-arity eval
@@ -23,6 +23,25 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 use Dan;
 use Inline::Python;
 
+#| singleton pattern 
+#| viz. https://docs.raku.org/language/classtut
+
+class Py {
+    my  Py $instance;
+    has Inline::Python $.py;
+
+    method new {!!!}
+
+    submethod instance {
+	unless $instance {
+            $instance = Py.bless( py => Inline::Python.new ); 
+ 	    $instance.py.run('import numpy as np');
+	    $instance.py.run('import pandas as pd');
+	}
+        $instance;
+    }
+}
+
 # sorts Hash by value, returns keys (poor woman's Ordered Hash)
 sub sbv( %h --> Seq ) is export(:ALL) {
     %h.sort(*.value).map(*.key)
@@ -35,8 +54,9 @@ role Series does Positional does Iterable is export {
     has Any     @!data;
     has Int     %!index;
 
-#FIXME - make py a singleton(!) 
-    has $!py = Inline::Python.new; 	  #each instance has own Python context
+    has $!py = Py.instance.py; 	  
+
+    #has $!py = Inline::Python.new; 	  #each instance has own Python context
     has $!ps;				  #each instance has own Python Series obj 
 
     ### Constructors ###
@@ -88,6 +108,7 @@ role Series does Positional does Iterable is export {
     }
 
     method TWEAK {
+dd $!py;
 
 	# handle data => Array of Pairs 
 
