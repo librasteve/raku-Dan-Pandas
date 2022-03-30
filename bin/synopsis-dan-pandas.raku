@@ -47,10 +47,23 @@ s.splice(1,2,(j=>3));
 s.fillna;
 
 say ~s;
-dd s.^methods;
 
 my \t = Series.new( [f=>1, e=>0, d=>2] );
 s.concat: t;
 
 say ~s;
+
+#`[ 2-arity pd methods
+say ~my \quants = Series.new([100, 15, 50, 15, 25]);
+say ~my \prices = Series.new([1.1, 4.3, 2.2, 7.41, 2.89]);
+#say ~my \costs  = Series.new( quants >>*<< prices );
+
+my \costs = quants;
+costs.pd: '.mul', prices;
+#]
+
+
+
+
+
 

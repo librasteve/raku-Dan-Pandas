@@ -18,12 +18,15 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 -- duplicate keys
 -- disjoint keys
 -- review Dan::Series to better align codebases
+- v2
+-- parse Pandas methods (viz. https://stackoverflow.com/questions/71667086)
+-- offer dyadic operators (eg. +-*/ for Series & DataFrames)
 #]
 
 use Dan;
 use Inline::Python;
 
-#| singleton pattern 
+#| singleton pattern for shared Python context 
 #| viz. https://docs.raku.org/language/classtut
 
 class Py {
@@ -43,7 +46,7 @@ class Py {
 }
 
 # sorts Hash by value, returns keys (poor woman's Ordered Hash)
-sub sbv( %h --> Seq ) is export(:ALL) {
+sub sbv( %h --> Seq ) is export {
     %h.sort(*.value).map(*.key)
 }
 
@@ -55,9 +58,7 @@ role Series does Positional does Iterable is export {
     has Int     %!index;
 
     has $!py = Py.instance.py; 	  
-
-    #has $!py = Inline::Python.new; 	  #each instance has own Python context
-    has $!ps;				  #each instance has own Python Series obj 
+    has $.ps;			  #each instance has own Python Series obj 
 
     ### Constructors ###
  
@@ -108,7 +109,6 @@ role Series does Positional does Iterable is export {
     }
 
     method TWEAK {
-dd $!py;
 
 	# handle data => Array of Pairs 
 
@@ -134,12 +134,6 @@ dd $!py;
 	    }.Hash
 	}
   
-	# set up Python Series object from attrs
-
-#FIXME move up to use ??
-        $!py.run('import numpy as np');
-        $!py.run('import pandas as pd');
-
 	my $args = self.prep-args;
 
 # since Inline::Python will not pass a Series class back and forth
@@ -178,6 +172,10 @@ class RakuSeries:
 
     def rs_eval(self, exp):
         result = eval('self.series' + exp)
+        print(result) 
+
+    def rs_eval2(self, exp, other):
+        result = eval('self.series' + exp + '(other.series)')
         print(result) 
 
     def rs_exec(self, exp):
@@ -307,12 +305,16 @@ class RakuSeries:
 
     ### Pandas Methods ###
 
-    method pd( $exp ) {
+    multi method pd( $exp ) {
 	if $exp ~~ /'='/ {
 	    $!ps.rs_exec( $exp )
 	} else {
 	    $!ps.rs_eval( $exp )
 	}
+    }
+
+    multi method pd( $exp, Dan::Pandas::Series:D $other ) {
+	$!ps.rs_eval2( $exp, $other.ps )
     }
 
     ### Role Support ###
