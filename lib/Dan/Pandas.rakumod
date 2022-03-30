@@ -3,14 +3,14 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 #`[TODOs
 - Series
 -- accessors
--- Pandas methods
+-- pd methods
 -- pull (to Raku-side attrs)
 -- splice
 -- concat
-^^ DONE
+-- 2-arity pd methods 
 -- coerce to Dan::Series (.Dan::Series)
+^^ DONE
 -- new from Dan::Series
--- 2-arity eval
 - DataFrame
 -- ditto
 - Big Pic
@@ -19,8 +19,8 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 -- disjoint keys
 -- review Dan::Series to better align codebases
 - v2
--- parse Pandas methods (viz. https://stackoverflow.com/questions/71667086)
--- offer dyadic operators (eg. +-*/ for Series & DataFrames)
+--? parse Pandas methods (viz. https://stackoverflow.com/questions/71667086)
+--? offer dyadic operators (eg. +-*/ for Series & DataFrames)
 #]
 
 use Dan;
@@ -209,6 +209,11 @@ class RakuSeries:
     #| get index as Array
     multi method ix {
 	$!ps.rs_index()
+    }
+
+    method Dan-Series {
+	$.pull;
+	Dan::Series.new( :$!name, :@!data, :%!index )
     }
 
     #### Sync Methods #####
@@ -485,7 +490,7 @@ role DataSlice does Positional does Iterable is export(:ALL) {
     ### Output Methods ###
 
     method str-attrs {
-        %( :$.name ) 
+        %( :$!name ) 
     }
 
     method Str {
@@ -503,6 +508,8 @@ role DataSlice does Positional does Iterable is export(:ALL) {
 
         $data-str ~ "\n" ~ $attr-str ~ "\n"
     }
+
+
 
     ### Role Support ###
 

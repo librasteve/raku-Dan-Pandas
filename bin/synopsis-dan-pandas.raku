@@ -33,6 +33,12 @@ say s<c>;
 
 say ~s;
 
+s.splice(1,2,(j=>3)); 
+s.fillna;
+
+my \t = Series.new( [f=>1, e=>0, d=>2] );
+s.concat: t;
+
 #`[ pd methods
 s.pd: '.shape';
 s.pd: '.flags';
@@ -41,17 +47,8 @@ s.pd: '.to_json("test.json")';
 s.pd: '.to_csv("test.csv")';
 s.pd: '.iloc[2] = 23';
 s.pd: '.iloc[2]';
+say ~s;
 #]
-
-s.splice(1,2,(j=>3)); 
-s.fillna;
-
-say ~s;
-
-my \t = Series.new( [f=>1, e=>0, d=>2] );
-s.concat: t;
-
-say ~s;
 
 #`[ 2-arity pd methods
 say ~my \quants = Series.new([100, 15, 50, 15, 25]);
@@ -62,6 +59,8 @@ my \costs = quants;
 costs.pd: '.mul', prices;
 #]
 
+my \u = s.Dan-Series;
+say u.^name;
 
 
 
