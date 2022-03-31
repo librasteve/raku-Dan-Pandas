@@ -151,7 +151,6 @@ my $py-str = qq{
 class RakuSeries:
     def __init__(self):
         self.series = pd.Series($args)
-        #self.series = pd.Series($args)
         #print(self.series)
 
     def rs_str(self):
@@ -385,8 +384,253 @@ class RakuSeries:
 
 }
 
-role DataFrame is export {
+role DataFrame does Positional does Iterable is export {
+    has Str         $!name;
+    has Any         @!data;             #redo 2d shaped Array when [; ] implemented
+    has Int         %!index;            #row index
+    has Int         %!columns;          #column index
 
+    has $!py = Py.instance.py; 	  
+    has $.ps;			  #each instance has own Python Series obj 
+
+    ### Constructors ###
+ 
+    # Positional data array arg => redispatch as Named
+    multi method new( @data, *%h ) {
+        samewith( :@data, |%h )
+    }
+
+
+    submethod BUILD( :$name, :@data, :$index, :$columns ) {
+        $!name = $name // 'anon';
+	@!data = @data;
+
+	if $index {
+            if $index !~~ Hash {
+                %!index = $index.map({ $_ => $++ })
+	    } else {
+	        %!index = $index
+	    }
+	}
+
+	if $columns {
+            if $columns !~~ Hash {
+                %!columns = $columns.map({ $_ => $++ })
+	    } else {
+	        %!columns = $columns
+	    }
+	}
+    }
+
+    method prep-args {
+
+	my $args  = "[{@!data.join(', ')}]";
+	   $args ~~ s:g/NaN/np.nan/;
+	   $args ~= ", index=['{%!index.&sbv.join("', '")}']"   if %!index; 	
+	   $args ~= ", name=\"$!name\""   	      		if $!name;
+
+    }
+
+    method TWEAK {
+#`[[
+	# handle data => Array of Pairs 
+
+        if @!data.first ~~ Pair {
+
+            die "index not permitted if data is Array of Pairs" if %!index;
+
+            @!data = gather {
+                for @!data -> $p {
+                    take $p.value;
+                    %!index{$p.key} = $++
+                }
+            }.Array
+	}
+
+	# handle implicit index
+
+	if ! %!index {
+	    %!index = gather {
+		for 0..^@!data {
+		    take ( $_ => $_ )
+		}
+	    }.Hash
+	}
+#]]
+  
+	dd my $args = self.prep-args;
+
+# since Inline::Python will not pass a DataFrame class back and forth
+# we make and instantiate a standard class 'RakuDataFrame' as container
+# and populate methods over in Python to condition the returns as 
+# supported datastypes (Int, Str, Array, Hash, etc)
+
+my $py-str = qq{
+#iamerejh
+class RakuDataFrame:
+    def __init__(self):
+        self.dataframe = pd.DataFrame($args)
+        print(self.dataframe)
+#`[[
+    def rs_str(self):
+        return(str(self.dataframe))
+
+    def rs_dtype(self):
+        return(str(self.dataframe.dtype.type))
+
+    def rs_index(self):
+        return(self.dataframe.index)
+
+    def rs_reindex(self, new_index):
+        result = self.dataframe.reindex(new_index)
+        return(result)
+
+    def rs_size(self):
+        return(self.dataframe.size)
+
+    def rs_values(self):
+        array = self.dataframe.values
+        result = array.tolist()
+        return(result)
+
+    def rs_eval(self, exp):
+        result = eval('self.dataframe' + exp)
+        print(result) 
+
+    def rs_eval2(self, exp, other):
+        result = eval('self.dataframe' + exp + '(other.dataframe)')
+        print(result) 
+
+    def rs_exec(self, exp):
+        exec('self.dataframe' + exp)
+
+    def rs_push(self, args):
+        self.dataframe = eval('pd.DataFrame(' + args + ')')
+#]]
+};
+
+	$!py.run($py-str);
+	$!ps = $!py.call('__main__', 'RakuSeries');
+    }
+
+    #### Info Methods #####
+
+    method Str { 
+	$!ps.rs_str()
+    }
+
+#`[[
+    ### Constructors ###
+
+    # helper functions
+    method load-from-series( :$row-count, *@series ) {
+        loop ( my $i=0; $i < @series; $i++ ) {
+
+            @!dtypes.push: @series[$i].dtype;
+
+            my $key = @series[$i].name // @alphi[$i];
+            %!columns{ $key } = $i;
+
+            loop ( my $j=0; $j < $row-count; $j++ ) {
+                @!data[$j;$i] = @series[$i][$j]                             #TODO := with BIND-POS
+            }
+        }
+    }
+
+    method load-from-slices( @slices ) {
+        loop ( my $i=0; $i < @slices; $i++ ) {
+
+            my $key = @slices[$i].name // ~$i;
+            %!index{ $key } = $i;
+
+            @!data[$i] := @slices[$i].data
+        }
+    }
+
+    method TWEAK {
+        given @!data.first {
+
+            # data arg is 1d Array of Pairs (label => Series)
+            when Pair {
+                die "columns / index not permitted if data is Array of Pairs" if %!index || %!columns;
+
+                my $row-count = 0;
+                @!data.map( $row-count max= *.value.elems );
+
+                my @index  = 0..^$row-count;
+                my @labels = @!data.map(*.key);
+
+                # make (or update) each Series with column key as name, index as index
+                my @series = gather {
+                    for @!data -> $p {
+                        my $name = ~$p.key;
+                        given $p.value {
+                            # handle Series/Array with row-elems (auto index)   #TODO: avoid Series.new
+                            when Series { take Series.new( $_.data, :$name, dtype => ::($_.dtype) ) }
+                            when Array  { take Series.new( $_, :$name ) }
+
+                            # handle Scalar items (set index to auto-expand)    #TODO: lazy expansion
+                            when Str|Real|Date { take Series.new( $_, :$name, :@index ) }
+                        }
+                    }
+                }.Array;
+
+                # clear and load data
+                @!data = [];
+                $.load-from-series: row-count => +@index, |@series;
+
+                # make index Hash (row label => pos) 
+                my $j = 0;
+                %!index{~$j} = $j++ for ^@index;
+
+                # make columns Hash (col label => pos) 
+                my $i = 0;
+                %!columns{@labels[$i]} = $i++ for ^@labels;
+            } 
+
+            # data arg is 1d Array of Series (cols)
+            when Series {
+                die "columns.elems != data.first.elems" if ( %!columns && %!columns.elems != @!data.first.elems );
+
+                my $row-count = @!data.first.elems;
+                my @series = @!data; 
+
+                # clear and load data (and columns)
+                @!data = [];
+                $.load-from-series: :$row-count, |@series;
+
+                # make index Hash
+                %!index = @series.first.index;
+            }
+
+            # data arg is 1d Array of DataSlice (rows)
+            when DataSlice {
+                my @slices = @!data; 
+
+                # clear and load data (and index)
+                @!data = [];
+                $.load-from-slices: @slices;
+
+                # make columns Hash
+                %!columns = @slices.first.index;
+            }
+
+            # data arg is 2d Array (already) 
+            default {
+                die "columns.elems != data.first.elems" if ( %!columns && %!columns.elems != @!data.first.elems );
+
+                if ! %!index {
+                    [0..^@!data.elems].map( {%!index{$_.Str} = $_} );
+                }
+                if ! %!columns {
+                    @alphi[0..^@!data.first.elems].map( {%!columns{$_} = $++} ).eager;
+                }
+                #no-op
+            } 
+        }
+    }
+
+#]]
 }
 
 

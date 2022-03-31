@@ -5,6 +5,7 @@ use lib '../lib';
 use Dan;
 use Dan::Pandas;
 
+#`[[
 my \s = $;
 #my $index = {:a(0), :b(1), :c(2), :d(3), :e(4), :f(5)};
 #s = Series.new(data => [1, 3, 5, NaN, 6, 8], :$index, name => 'john' );
@@ -66,8 +67,35 @@ say ~u;
 my \v = Series.new( u );
 say v.^name;
 say ~v;
+#]]
 
+say "=============================================";
 
+### DataFrames ###
 
+my \dates = (Date.new("2022-01-01"), *+1 ... *)[^6];
+my \df = DataFrame.new( [[rand xx 4] xx 6], index => dates, columns => <A B C D> );
+say ~df;
+
+#`[
+say "---------------------------------------------";
+
+# Data Accessors [row;col]
+say df[0;0];
+df[0;0] = 3;                # set value
+
+# Smart Accessors (mix Positional and Associative)
+say df[0][0];
+say df[0]<A>;
+say df{"2022-01-03"}[1];
+
+# Object Accessors & Slices (see note 1)
+say ~df[0];                 # 1d Row 0 (DataSlice)
+say ~df[*]<A>;              # 1d Col A (Series)
+say ~df[0..*-2][1..*-1];    # 2d DataFrame
+say ~df{dates[0..1]}^;      # the ^ postfix converts an Array of DataSlices into a new DataFrame
+
+say "---------------------------------------------";
+#]
 
 
