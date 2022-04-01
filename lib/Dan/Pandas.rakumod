@@ -67,8 +67,8 @@ class Py {
 role Series does Positional does Iterable is export {
 
     ## attrs for construct and pull only: not synched to Python side ##
-    has Str	$!name;
-    has Any     @!data;
+    has Str	$.name;
+    has Any     @.data;
     has Int     %!index;
 
     has $!py = Py.instance.py; 	  
@@ -399,7 +399,7 @@ class RakuSeries:
 }
 
 role DataFrame does Positional does Iterable is export {
-    has Any         @!data;             #redo 2d shaped Array when [; ] implemented
+    has Any         @.data;             #redo 2d shaped Array when [; ] implemented
     has Int         %!index;            #row index
     has Int         %!columns;          #column index
 
@@ -507,6 +507,9 @@ class RakuDataFrame:
     def rd_index(self):
         return(self.dataframe.index)
 
+    def rd_columns(self):
+        return(self.dataframe.columns)
+
     def rd_reindex(self, new_index):
         result = self.dataframe.reindex(new_index)
         return(result)
@@ -543,6 +546,46 @@ class RakuDataFrame:
 
     method Str { 
 	$!po.rd_str()
+    }
+
+#`[[
+    method dtype {
+	$!po.rs_dtype()
+    }
+#]]
+
+    #| get index as Hash
+    method index {
+	my @keys = $!po.rd_index();
+        @keys.map({ $_ => $++ }).Hash
+    }
+
+    #| get columns as Hash
+    method columns {
+	my @keys = $!po.rd_columns();
+        @keys.map({ $_ => $++ }).Hash
+    }
+
+#`[[
+    #| get index as Array
+    multi method ix {
+	$!po.rs_index()
+    }
+
+    method Dan-Series {
+	$.pull;
+	Dan::Series.new( :$!name, :@!data, :%!index )
+    }
+#]]
+
+    #### Sync Methods #####
+    #### Pull & Push  #####
+
+    #| set raku attrs to rd_array / rd_index / rd_columns
+    method pull {
+	%!index = $.index;
+	%!columns = $.columns;
+	@!data = $!po.rd_values;
     }
 
 #`[[
@@ -669,12 +712,15 @@ class RakuDataFrame:
         Any
     }
     method elems {
+	$.pull;
         @!data.elems
     }
     method AT-POS( $p, $q? ) {
+	$.pull;
         @!data[$p;$q // *]
     }
     method EXISTS-POS( $p ) {
+	$.pull;
         0 <= $p < @!data.elems ?? True !! False
     }
 
@@ -682,15 +728,19 @@ class RakuDataFrame:
     # viz. https://docs.raku.org/type/Iterable
 
     method iterator {
+	$.pull;
         @!data.iterator
     }
     method flat {
+	$.pull;
         @!data.flat
     }
     method lazy {
+	$.pull;
         @!data.lazy
     }
     method hyper {
+	$.pull;
         @!data.hyper
     }
 }

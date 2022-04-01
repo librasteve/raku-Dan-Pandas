@@ -11,10 +11,10 @@ my \s = $;
 #s = Series.new(data => [1, 3, 5, NaN, 6, 8], :$index, name => 'john' );
 #s = Series.new(data => [1, 3, 5, NaN, 6, 8], index => <a b c d e f>, name => 'john' );
 #s = Series.new(data => [1, 3, 5, NaN, 6, 8]);
-s = Series.new([1, 3, 5, 6, 8]);
+#s = Series.new([1, 3, 5, 6, 8]);
 #s = Series.new([1, 3, 5, NaN, 6, 8]);
 #s = Series.new( [rand xx 5], index => <a b c d e>);
-#s = Series.new( [b=>1, a=>0, c=>2] );               #from Array of Pairs
+s = Series.new( [b=>1, a=>0, c=>2] );               #from Array of Pairs
 say ~s;
 
 #say s.dtype;
@@ -89,8 +89,6 @@ df[0;0] = 3;                # set value (not sure why this works, must manual pu
 
 # Smart Accessors (mix Positional and Associative)
 say df[0][0];
-#iamerejh - public attrs?
-#`[
 say df[0]<A>;
 say df{"2022-01-03"}[1];
 
@@ -98,6 +96,7 @@ say df{"2022-01-03"}[1];
 say ~df[0];                 # 1d Row 0 (DataSlice)
 say ~df[*]<A>;              # 1d Col A (Series)
 say ~df[0..*-2][1..*-1];    # 2d DataFrame
+#`[
 say ~df{dates[0..1]}^;      # the ^ postfix converts an Array of DataSlices into a new DataFrame
 
 say "---------------------------------------------";
