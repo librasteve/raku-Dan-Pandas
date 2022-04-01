@@ -657,6 +657,42 @@ class RakuDataFrame:
     }
 
 #]]
+
+    ### Role Support ###
+
+    # Positional role support 
+    # viz. https://docs.raku.org/type/Positional
+    # delegates semilist [; ] value element access to @!data
+    # override list [] access anyway
+
+    method of {
+        Any
+    }
+    method elems {
+        @!data.elems
+    }
+    method AT-POS( $p, $q? ) {
+        @!data[$p;$q // *]
+    }
+    method EXISTS-POS( $p ) {
+        0 <= $p < @!data.elems ?? True !! False
+    }
+
+    # Iterable role support 
+    # viz. https://docs.raku.org/type/Iterable
+
+    method iterator {
+        @!data.iterator
+    }
+    method flat {
+        @!data.flat
+    }
+    method lazy {
+        @!data.lazy
+    }
+    method hyper {
+        @!data.hyper
+    }
 }
 
 #`[[
@@ -1228,38 +1264,39 @@ role DataFrame does Positional does Iterable is export(:ALL) {
         @!data.hyper
     }
 }
+#]]
 
 ### Postfix '^' as explicit subscript chain terminator
-multi postfix:<^>( DataSlice @ds ) is export(:ALL) {
+multi postfix:<^>( Dan::DataSlice @ds ) is export {
     DataFrame.new(@ds) 
 }
-multi postfix:<^>( DataSlice $ds ) is export(:ALL) {
+multi postfix:<^>( Dan::DataSlice $ds ) is export {
     DataFrame.new(($ds,)) 
 }
 
-### Override first subscript [i] to make DataSlices (rows)
+### Override first subscript [i] to make Dan::DataSlices (rows)
 
-#| provides single DataSlice which can be [j] subscripted directly to value 
-multi postcircumfix:<[ ]>( DataFrame:D $df, Int $p ) is export(:ALL) {
-    DataSlice.new( data => $df.data[$p;*], index => $df.columns, name => $df.index.&sbv[$p] )
+#| provides single Dan::DataSlice which can be [j] subscripted directly to value 
+multi postcircumfix:<[ ]>( DataFrame:D $df, Int $p ) is export {
+    Dan::DataSlice.new( data => $df.data[$p;*], index => $df.columns, name => $df.index.&sbv[$p] )
 }
 
 # helper
 sub make-aods( $df, @s ) {
-    my DataSlice @ = @s.map({
-        DataSlice.new( data => $df.data[$_;*], index => $df.columns, name => $df.index.&sbv[$_] )
+    my Dan::DataSlice @ = @s.map({
+        Dan::DataSlice.new( data => $df.data[$_;*], index => $df.columns, name => $df.index.&sbv[$_] )
     })
 }
 
-#| slices make Array of DataSlice objects
-multi postcircumfix:<[ ]>( DataFrame:D $df, @s where Range|List ) is export(:ALL) {
+#| slices make Array of Dan::DataSlice objects
+multi postcircumfix:<[ ]>( DataFrame:D $df, @s where Range|List ) is export {
     make-aods( $df, @s )
 }
-multi postcircumfix:<[ ]>( DataFrame:D $df, WhateverCode $p ) is export(:ALL) {
+multi postcircumfix:<[ ]>( DataFrame:D $df, WhateverCode $p ) is export {
     my @s = $p( |($df.elems xx $p.arity) );
     make-aods( $df, @s )
 }
-multi postcircumfix:<[ ]>( DataFrame:D $df, Whatever ) is export(:ALL) {
+multi postcircumfix:<[ ]>( DataFrame:D $df, Whatever ) is export {
     my @s = 0..^$df.elems; 
     make-aods( $df, @s )
 }
@@ -1270,7 +1307,7 @@ multi postcircumfix:<[ ]>( DataFrame:D $df, Whatever ) is export(:ALL) {
 # helper
 sub sliced-slices( @aods, @s ) {
     gather {
-        @aods.map({ take DataSlice.new( data => $_[@s], index => $_.index.&sbv[@s], name => $_.name )}) 
+        @aods.map({ take Dan::DataSlice.new( data => $_[@s], index => $_.index.&sbv[@s], name => $_.name )}) 
     }   
 }
 sub make-series( @sls ) {
@@ -1282,43 +1319,42 @@ sub make-series( @sls ) {
 }
 
 #| provides single Series which can be [j] subscripted directly to value 
-multi postcircumfix:<[ ]>( DataSlice @aods , Int $p ) is export(:ALL) {
+multi postcircumfix:<[ ]>( Dan::DataSlice @aods , Int $p ) is export {
     make-series( sliced-slices(@aods, ($p,)) )
 }
 
-#| make DataFrame from sliced DataSlices 
-multi postcircumfix:<[ ]>( DataSlice @aods , @s where Range|List ) is export(:ALL) {
+#| make DataFrame from sliced Dan::DataSlices 
+multi postcircumfix:<[ ]>( Dan::DataSlice @aods , @s where Range|List ) is export {
     DataFrame.new( sliced-slices(@aods, @s) )
 }
-multi postcircumfix:<[ ]>( DataSlice @aods, WhateverCode $p ) is export(:ALL) {
+multi postcircumfix:<[ ]>( Dan::DataSlice @aods, WhateverCode $p ) is export {
     my @s = $p( |(@aods.first.elems xx $p.arity) );
     DataFrame.new( sliced-slices(@aods, @s) )
 }
-multi postcircumfix:<[ ]>( DataSlice @aods, Whatever ) is export(:ALL) {
+multi postcircumfix:<[ ]>( Dan::DataSlice @aods, Whatever ) is export {
     my @s = 0..^@aods.first.elems;
     DataFrame.new( sliced-slices(@aods, @s) )
 }
 
 ### Override first assoc subscript {i}
 
-multi postcircumfix:<{ }>( DataFrame:D $df, $k ) is export(:ALL) {
+multi postcircumfix:<{ }>( DataFrame:D $df, $k ) is export {
     $df[$df.index{$k}]
 }
-multi postcircumfix:<{ }>( DataFrame:D $df, @ks ) is export(:ALL) {
+multi postcircumfix:<{ }>( DataFrame:D $df, @ks ) is export {
     $df[$df.index{@ks}]
 }
 
 ### Override second subscript [j] to make DataFrame
 
-multi postcircumfix:<{ }>( DataSlice @aods , $k ) is export(:ALL) {
+multi postcircumfix:<{ }>( Dan::DataSlice @aods , $k ) is export {
     my $p = @aods.first.index{$k};
     make-series( sliced-slices(@aods, ($p,)) )
 }
-multi postcircumfix:<{ }>( DataSlice @aods , @ks ) is export(:ALL) {
+multi postcircumfix:<{ }>( Dan::DataSlice @aods , @ks ) is export {
     my @s = @aods.first.index{@ks};
     DataFrame.new( sliced-slices(@aods, @s) )
 }
-#]]
 
 #EOF
 
