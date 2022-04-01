@@ -2,6 +2,7 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 
 #`[TODOs
 - Series
+-- constructors
 -- accessors
 -- pd methods
 -- pull (to Raku-side attrs)
@@ -10,21 +11,39 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 -- 2-arity pd methods 
 -- coerce to Dan::Series (.Dan::Series)
 -- new from Dan::Series
-^^ DONE
 - DataFrame
--- ditto
+-- constructors
+-- accessors
+^^ DONE
+-- pd methods
+-- pull (to Raku-side attrs)
+-- splice
+-- concat
+-- 2-arity pd methods 
+-- coerce to Dan::Series (.Dan::Series)
+-- new from Dan::Series
 - Big Pic
 -- ix index reindex behaviour
 -- duplicate keys
 -- disjoint keys
 -- review Dan::Series to better align codebases
+--- remove name from Dan::Series::DataFrame
 - v2
 --? parse Pandas methods (viz. https://stackoverflow.com/questions/71667086)
 --? offer dyadic operators (eg. +-*/ for Series & DataFrames)
+--? support Python Timeseries / DatetimeIndex
 #]
 
 use Dan;
 use Inline::Python;
+
+# generates default column labels
+constant @alphi = 'A'..∞; 
+
+# sorts Hash by value, returns keys (poor woman's Ordered Hash)
+sub sbv( %h --> Seq ) is export {
+    %h.sort(*.value).map(*.key)
+}
 
 #| singleton pattern for shared Python context 
 #| viz. https://docs.raku.org/language/classtut
@@ -45,11 +64,6 @@ class Py {
     }
 }
 
-# sorts Hash by value, returns keys (poor woman's Ordered Hash)
-sub sbv( %h --> Seq ) is export {
-    %h.sort(*.value).map(*.key)
-}
-
 role Series does Positional does Iterable is export {
 
     ## attrs for construct and pull only: not synched to Python side ##
@@ -58,7 +72,7 @@ role Series does Positional does Iterable is export {
     has Int     %!index;
 
     has $!py = Py.instance.py; 	  
-    has $.ps;			  #each instance has own Python Series obj 
+    has $.po;			  #each instance has own Python Series obj 
 
     ### Constructors ###
  
@@ -191,28 +205,28 @@ class RakuSeries:
 };
 
 	$!py.run($py-str);
-	$!ps = $!py.call('__main__', 'RakuSeries');
+	$!po = $!py.call('__main__', 'RakuSeries');
     }
 
     #### Info Methods #####
 
     method Str { 
-	$!ps.rs_str()
+	$!po.rs_str()
     }
 
     method dtype {
-	$!ps.rs_dtype()
+	$!po.rs_dtype()
     }
 
     #| get index as Hash
     method index {
-	my @keys = $!ps.rs_index();
+	my @keys = $!po.rs_index();
         @keys.map({ $_ => $++ }).Hash
     }
 
     #| get index as Array
     multi method ix {
-	$!ps.rs_index()
+	$!po.rs_index()
     }
 
     method Dan-Series {
@@ -226,7 +240,7 @@ class RakuSeries:
     #| set raku attrs to rs_array / rs_index
     method pull {
 	%!index = $.index;
-	@!data = $!ps.rs_values;
+	@!data = $!po.rs_values;
     }
 
     #### MAC Methods #####
@@ -236,12 +250,12 @@ class RakuSeries:
 
     #| set index from Array (Dan::Series style) 
     multi method ix( $new-index ) {
-	$!ps.rs_reindex( $new-index )
+	$!po.rs_reindex( $new-index )
     }
 
     #| reindex from Array (Pandas style)
     method reindex( @index ) {
-	my $rese  = $!ps.rs_reindex( $@index );
+	my $rese  = $!po.rs_reindex( $@index );
 	my @data  = $rese.values; 
 	Series.new( :@data, :@index )
     }
@@ -258,7 +272,7 @@ class RakuSeries:
         @!data  = @aop.map(*.value);
 
 	my $args = self.prep-args;
-	$!ps.rs_push($args)
+	$!po.rs_push($args)
     }
 
     #| splice as Array of values or Array of Pairs
@@ -316,14 +330,14 @@ class RakuSeries:
 
     multi method pd( $exp ) {
 	if $exp ~~ /'='/ {
-	    $!ps.rs_exec( $exp )
+	    $!po.rs_exec( $exp )
 	} else {
-	    $!ps.rs_eval( $exp )
+	    $!po.rs_eval( $exp )
 	}
     }
 
     multi method pd( $exp, Dan::Pandas::Series:D $other ) {
-	$!ps.rs_eval2( $exp, $other.ps )
+	$!po.rs_eval2( $exp, $other.po )
     }
 
     ### Role Support ###
@@ -335,7 +349,7 @@ class RakuSeries:
         Any
     }
     method elems {
-	$!ps.rs_size()
+	$!po.rs_size()
     }
     method AT-POS( $p ) {
 	$.pull;
@@ -385,13 +399,12 @@ class RakuSeries:
 }
 
 role DataFrame does Positional does Iterable is export {
-    has Str         $!name;
     has Any         @!data;             #redo 2d shaped Array when [; ] implemented
     has Int         %!index;            #row index
     has Int         %!columns;          #column index
 
     has $!py = Py.instance.py; 	  
-    has $.ps;			  #each instance has own Python Series obj 
+    has $.po;			  #each instance has own Python DataFrame obj 
 
     ### Constructors ###
  
@@ -401,8 +414,7 @@ role DataFrame does Positional does Iterable is export {
     }
 
 
-    submethod BUILD( :$name, :@data, :$index, :$columns ) {
-        $!name = $name // 'anon';
+    submethod BUILD( :@data, :$index, :$columns ) {
 	@!data = @data;
 
 	if $index {
@@ -424,10 +436,16 @@ role DataFrame does Positional does Iterable is export {
 
     method prep-args {
 
-	my $args  = "[{@!data.join(', ')}]";
+	my @rows = gather {
+            loop ( my $i=0; $i < @!data; $i++ ) {
+		take "[{@!data[$i;*].join(', ')}]"
+            }
+	}
+
+	my $args  = "[{@rows.join(', ')}]";
 	   $args ~~ s:g/NaN/np.nan/;
-	   $args ~= ", index=['{%!index.&sbv.join("', '")}']"   if %!index; 	
-	   $args ~= ", name=\"$!name\""   	      		if $!name;
+	   $args ~= ", index=['{%!index.&sbv.join("', '")}']"       if %!index; 	
+	   $args ~= ", columns=['{%!columns.&sbv.join("', '")}']"   if %!columns; 	
 
     }
 
@@ -446,9 +464,9 @@ role DataFrame does Positional does Iterable is export {
                 }
             }.Array
 	}
+#]]
 
-	# handle implicit index
-
+	#| handle implicit index
 	if ! %!index {
 	    %!index = gather {
 		for 0..^@!data {
@@ -456,9 +474,17 @@ role DataFrame does Positional does Iterable is export {
 		}
 	    }.Hash
 	}
-#]]
   
-	dd my $args = self.prep-args;
+	#| handle implicit columns
+	if ! %!columns {
+	    %!columns = gather {
+		for 0..^@!data.first {
+		    take ( @alphi[$_] => $_ )
+		}
+	    }.Hash
+	}
+  
+	my $args = self.prep-args;
 
 # since Inline::Python will not pass a DataFrame class back and forth
 # we make and instantiate a standard class 'RakuDataFrame' as container
@@ -466,57 +492,57 @@ role DataFrame does Positional does Iterable is export {
 # supported datastypes (Int, Str, Array, Hash, etc)
 
 my $py-str = qq{
-#iamerejh
+
 class RakuDataFrame:
     def __init__(self):
         self.dataframe = pd.DataFrame($args)
-        print(self.dataframe)
-#`[[
-    def rs_str(self):
+        #print(self.dataframe)
+
+    def rd_str(self):
         return(str(self.dataframe))
 
-    def rs_dtype(self):
+    def rd_dtype(self):
         return(str(self.dataframe.dtype.type))
 
-    def rs_index(self):
+    def rd_index(self):
         return(self.dataframe.index)
 
-    def rs_reindex(self, new_index):
+    def rd_reindex(self, new_index):
         result = self.dataframe.reindex(new_index)
         return(result)
 
-    def rs_size(self):
+    def rd_size(self):
         return(self.dataframe.size)
 
-    def rs_values(self):
+    def rd_values(self):
         array = self.dataframe.values
         result = array.tolist()
         return(result)
 
-    def rs_eval(self, exp):
+    def rd_eval(self, exp):
         result = eval('self.dataframe' + exp)
         print(result) 
 
-    def rs_eval2(self, exp, other):
+    def rd_eval2(self, exp, other):
         result = eval('self.dataframe' + exp + '(other.dataframe)')
         print(result) 
 
-    def rs_exec(self, exp):
+    def rd_exec(self, exp):
         exec('self.dataframe' + exp)
 
-    def rs_push(self, args):
+    def rd_push(self, args):
         self.dataframe = eval('pd.DataFrame(' + args + ')')
-#]]
+
 };
 
 	$!py.run($py-str);
-	$!ps = $!py.call('__main__', 'RakuSeries');
+	$!po = $!py.call('__main__', 'RakuDataFrame');
     }
 
     #### Info Methods #####
 
     method Str { 
-	$!ps.rs_str()
+	$!po.rd_str()
     }
 
 #`[[
@@ -633,7 +659,6 @@ class RakuDataFrame:
 #]]
 }
 
-
 #`[[
 
 ### Declarations & Helper Functions ###
@@ -641,310 +666,6 @@ class RakuDataFrame:
 # set mark for index/column duplicates
 constant $mark = '⋅'; # unicode Dot Operator U+22C5
 my regex notmark { <-[⋅]> }
-
-# generates default column labels
-constant @alphi = 'A'..∞; 
-
-# sorts Hash by value, returns keys (poor woman's Ordered Hash)
-sub sbv( %h --> Seq ) is export(:ALL) {
-    %h.sort(*.value).map(*.key)
-}
-
-role DataSlice does Positional does Iterable is export(:ALL) {
-    has Str     $.name is rw = 'anon';
-    has Any     @.data;
-    has Int     %.index;
-
-    ### Constructors ###
-
-    # accept index as List, make Hash
-    multi method new( List:D :$index, *%h ) {
-        samewith( index => $index.map({ $_ => $++ }).Hash, |%h )
-    }
-
-    #### MAC Methods #####
-    #Moves, Adds, Changes#
-
-    #| get index as Array (ordered by %.index.values)
-    multi method ix {
-        %.index.&sbv
-    }
-
-    #| set (re)index from Array
-    multi method ix( @new-index ) {
-        %.index.keys.map: { %.index{$_}:delete };
-        @new-index.map:   { %.index{$_} = $++  };
-    }
-
-    #| get self as Array of Pairs
-    multi method aop {
-        self.ix.map({ $_ => @.data[$++] })
-    }
-
-    #| set data and index from Array of Pairs
-    multi method aop( @aop ) {
-        self.ix:    @aop.map(*.key);
-        self.data = @aop.map(*.value);
-    }
-
-    #| splice as Array of values or Array of Pairs
-    #| viz. https://docs.raku.org/routine/splice
-    method splice( DataSlice:D: $start = 0, $elems?, *@replace ) {
-        given @replace {
-            when .first ~~ Pair {
-                my @aop = self.aop;
-                my @res = @aop.splice($start, $elems//*, @replace);
-                self.aop: @aop;
-                @res
-            }
-            default {
-                my @res = @!data.splice($start, $elems//*, @replace); 
-                self.fillna; 
-                @res
-            }
-        }
-    }
-
-    #| set empty data slots to Nan
-    method fillna {
-        self.aop.grep(! *.value.defined).map({ $_.value = NaN });
-    }
-
-    #| drop index and data when Nan
-    method dropna {
-        self.aop: self.aop.grep(*.value ne NaN);
-    }
-
-    #| drop index and data when empty 
-    method dropem {
-        self.aop: self.aop.grep(*.value.defined).Array;
-    }
-
-    # concat
-    method concat( DataSlice:D $dsr ) {
-        self.index.map({ 
-            if $dsr.index{$_.key}:exists {
-                warn "duplicate key {$_.key} not permitted" 
-            } 
-        });
-
-        my $start = self.index.elems;
-        my $elems = $dsr.index.elems;
-        my @replace = $dsr.aop;
-
-        self.splice: $start, $elems, @replace;    
-        self
-    }
-
-    ### Output Methods ###
-
-    method str-attrs {
-        %( :$!name ) 
-    }
-
-    method Str {
-        my $data-str = gather {
-            for %!index.&sbv -> $k {
-                take $k => @!data[%!index{$k}]
-            }
-        }.join("\n");
-
-        my $attr-str = gather {
-            for $.str-attrs.sort.map(*.kv).flat -> $k, $v {
-                take "$k: " ~$v
-            }
-        }.join(', ');
-
-        $data-str ~ "\n" ~ $attr-str ~ "\n"
-    }
-
-
-
-    ### Role Support ###
-
-    # Positional role support 
-    # viz. https://docs.raku.org/type/Positional
-
-    method of {
-        Any
-    }
-    method elems {
-        @!data.elems
-    }
-    method AT-POS( $p ) {
-        @!data[$p]
-    }
-    method EXISTS-POS( $p ) {
-        0 <= $p < @!data.elems ?? True !! False
-    }
-
-    # Iterable role support 
-    # viz. https://docs.raku.org/type/Iterable
-
-    method iterator {
-        @!data.iterator
-    }
-    method flat {
-        @!data.flat
-    }
-    method lazy {
-        @!data.lazy
-    }
-    method hyper {
-        @!data.hyper
-    }
-
-    # LIMITED Associative role support 
-    # viz. https://docs.raku.org/type/Associative
-    # DataSlice just implements the Assoc. methods, but does not do the Assoc. role
-    # ...thus very limited support for Assoc. accessors (to ensure Positional Hyper methods win)
-
-    method keyof {
-        Str(Any) 
-    }
-    method AT-KEY( $k ) {
-        @!data[%.index{$k}]
-    }
-    method EXISTS-KEY( $k ) {
-        %.index{$k}:exists
-    }
-}
-
-#| Series is a shim on DataSlice to mix in dtype and legacy constructors
-role Series does DataSlice is export(:ALL) {
-    has Any:U       $.dtype;                  #ie. type object
-
-    ### Constructors ###
-
-    # Positional data array arg => redispatch as Named
-    multi method new( @data, *%h ) {
-        samewith( :@data, |%h )
-    }
-    # Positional data scalar arg => redispatch as Named
-    multi method new( $data, *%h ) {
-        samewith( :$data, |%h )
-    }
-    # accept index as List, make Hash
-    multi method new( List:D :$index, *%h ) {
-        samewith( index => $index.map({ $_ => $++ }).Hash, |%h )
-    }
-    # Real (scalar) data arg => populate Array & redispatch
-    multi method new( Real:D :$data, :$index, *%h ) {
-        die "index required if data ~~ Real" unless $index;
-        samewith( data => ($data xx $index.elems).Array, :$index, |%h )
-    }
-
-    # Str (scalar) data arg => populate Array & redispatch
-    multi method new( Str:D :$data, :$index, *%h ) {
-        die "index required if data ~~ Str" unless $index;
-        samewith( data => ($data xx $index.elems).Array, :$index, |%h )
-    }
-
-    # Date (scalar) data arg => populate Array & redispatch
-    multi method new( Date:D :$data, :$index, *%h ) {
-        die "index required if data ~~ Date" unless $index;
-        samewith( data => ($data xx $index.elems).Array, :$index, |%h )
-    }
-
-    # provide ^name of type object eg. for output
-    multi method dtype {
-        $!dtype.^name       
-    }
-
-    method TWEAK {
-        # make index & data from %(index => data) Hash
-        if @.data.first ~~ Pair {
-            die "index not permitted if data is Array of Pairs" if %.index;
-
-            @.data = gather {
-                for @.data -> $p {
-                    take $p.value;
-                    %.index{$p.key} = $++;
-                }
-            }.Array
-
-        # make index Hash (index => pos)
-        } else {
-            die "index.elems != data.elems" if ( %.index && %.index.elems != @.data.elems );
-
-            if ! %.index {
-                my $i = 0;
-                %.index{~$i} = $i++ for ^@.data
-            }
-        }
-
-        # auto set dtype if not set from args
-        if $.dtype eq 'Any' {       #can't use !~~ Any since always False
-
-            my %dtypes = (); 
-            for @.data -> $d {
-                %dtypes{$d.^name} = 1;
-            }
-
-            given %dtypes.keys.any {
-                # if any are Str/Date, then whole Series must be
-                when 'Str'  { 
-                    $!dtype = Str;
-                    die "Cannot mix other dtypes with Str!" unless %dtypes.keys.all ~~ 'Str'
-                }
-                when 'Date' { 
-                    $!dtype = Date;
-                    die "Cannot mix other dtypes with Date!" unless %dtypes.keys.all ~~ 'Date'
-                }
-
-                # Real types are handled in descending sequence
-                when 'Num'  { $!dtype = Num }
-                when 'Rat'  { $!dtype = Rat }
-                when 'Int'  { $!dtype = Int }
-                when 'Bool' { $!dtype = Bool }
-            }
-        }
-    }
-
-    ### Mezzanine methods ###  
-    # (these use Accessors) #
-
-    method count { 
-        $.elems 
-    }
-
-    method mean {
-        $.sum / $.elems 
-    }
-
-    method std {
-        sqrt ( [+] $.data.map({ $^x - $.mean }).map({ $^x ** 2 }) / ( $.elems - 1 ) )
-    }
-
-    # fivenum code adapted from https://rosettacode.org/wiki/Fivenum#Raku
-    sub fourths ( Int $end ) {
-        my $end_22 = $end div 2 / 2;
-
-        return 0, $end_22, $end/2, $end - $end_22, $end;
-    }
-
-    method fivenum {
-        my @x = self.data.sort(+*)
-            or die 'Input must have at least one element';
-
-        my @d = fourths(@x.end);
-
-        ( @x[@d».floor] Z+ @x[@d».ceiling] ) »/» 2
-    }
-
-    method describe {
-        Series.new(
-            :$.name,
-            index => <count mean std min 25% 50% 75% max>,
-            data => [$.count, $.mean, $.std, |@.fivenum],
-        )
-    }
-
-    ### Outputs ###
-    method str-attrs {
-        %( :$.name, dtype => $!dtype.^name,)
-    }
-}
 
 role Categorical is Series is export(:ALL) {
     # Output
@@ -1601,74 +1322,3 @@ multi postcircumfix:<{ }>( DataSlice @aods , @ks ) is export(:ALL) {
 
 #EOF
 
-#$!py.run('print("hello world")');
-#$!ps = EVAL('pd.Series([1, 3, 5, np.nan, 6, 8])', :lang<Python>);
-
-#`[[
-$!py.run('
-def test():
-    print("ok 1 - executing a parameterless function without return value")
-    return
-def test_int_params(a, b):
-    if a == 2 and b == 1:
-        print("ok 2 - int params")
-    else:
-        print("not ok 2 - int params")
-    return
-def test_str_params(a, b, i):
-    if a == "Hello" and b == "Python":
-        print("ok %i - str params" % i)
-    else:
-        print("not ok %i - str params" % i)
-    return
-def test_int_retval():
-    return 7
-def test_int_retvals():
-    return 3, 1, 2
-def test_str_retval():
-    return u"Hello Perl 6!"
-def test_mixed_retvals():
-    return (u"Hello", u"Perl", 6)
-def test_none(undef):
-    return undef is None
-def test_hash(h):
-    return (
-        isinstance(h, dict)
-        and len(h.keys()) == 2
-        and "a" in h
-        and "b" in h
-        and h["a"] == 2
-        and isinstance(h["b"], dict)
-        and isinstance(h["b"]["c"], list)
-        and len(h["b"]["c"]) == 2
-        and h["b"]["c"][0] == 4
-        and h["b"]["c"][1] == 3
-    )
-def test_foo(foo):
-    return foo.test()
-class Foo:
-    def __init__(self, val):
-        self.val = val
-    def test(self):
-        return self.val
-    def sum(self, a, b):
-        return a + b
-    def yo(self):
-        return self 
-class RakuSeries:
-    def __init__(self, data):
-        self.series = pd.Series([1, 3, 5, np.nan, 6, 8])
-        #self.series = pd.Series(data)
-    def get(self):
-        return self.series
-');
-
-	dd my %h = $!py.call('__main__', 'test_hash', ${a => 2, b => {c => [4, 3]}});
-	dd my $x = $!py.call('__main__', 'test_int_retval');
-	dd my $y = $!py.call('__main__', 'Foo', 1).sum(3, 1);
-	dd my $z = $!py.call('__main__', 'Foo', 1).yo;
-	dd my $a = $z.sum(4,2);
-	dd my $b = $!py.call('__main__', 'RakuSeries', 8);
-	dd my $c = $b.get;
-	
-#]]

@@ -75,15 +75,17 @@ say "=============================================";
 
 my \dates = (Date.new("2022-01-01"), *+1 ... *)[^6];
 my \df = DataFrame.new( [[rand xx 4] xx 6], index => dates, columns => <A B C D> );
+#my \df = DataFrame.new( [[rand xx 4] xx 6], columns => <A B C D> );
+#my \df = DataFrame.new( [[rand xx 4] xx 6] );
 say ~df;
 
-#`[
 say "---------------------------------------------";
 
 # Data Accessors [row;col]
-say df[0;0];
-df[0;0] = 3;                # set value
+#say df[0;0];
+#df[0;0] = 3;                # set value
 
+#`[
 # Smart Accessors (mix Positional and Associative)
 say df[0][0];
 say df[0]<A>;
