@@ -26,7 +26,7 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 -- ix index reindex behaviour
 -- duplicate keys
 -- disjoint keys
--- review Dan::Series to better align codebases
+-- review Dan::Series to better align codebases (2x2)
 --- remove name from Dan::Series::DataFrame
 - v2
 --? parse Pandas methods (viz. https://stackoverflow.com/questions/71667086)
@@ -413,7 +413,6 @@ role DataFrame does Positional does Iterable is export {
         samewith( :@data, |%h )
     }
 
-
     submethod BUILD( :@data, :$index, :$columns ) {
 	@!data = @data;
 
@@ -434,8 +433,33 @@ role DataFrame does Positional does Iterable is export {
 	}
     }
 
-    method prep-args {
+    # helper functions for TWEAK
 
+    method load-from-series( :$row-count, *@series ) {
+        loop ( my $i=0; $i < @series; $i++ ) {
+
+            #@!dtypes.push: @series[$i].dtype;   #use Pandas to autoset dtypes
+
+            my $key = @series[$i].name // @alphi[$i];
+            %!columns{ $key } = $i;
+
+            loop ( my $j=0; $j < $row-count; $j++ ) {
+                @!data[$j;$i] = @series[$i][$j]                             #TODO := with BIND-POS
+            }
+        }
+    }
+
+    method load-from-slices( @slices ) {
+        loop ( my $i=0; $i < @slices; $i++ ) {
+
+            my $key = @slices[$i].name // ~$i;
+            %!index{ $key } = $i;
+
+            @!data[$i] := @slices[$i].data
+        }
+    }
+
+    method prep-args {
 	my @rows = gather {
             loop ( my $i=0; $i < @!data; $i++ ) {
 		take "[{@!data[$i;*].join(', ')}]"
@@ -446,44 +470,91 @@ role DataFrame does Positional does Iterable is export {
 	   $args ~~ s:g/NaN/np.nan/;
 	   $args ~= ", index=['{%!index.&sbv.join("', '")}']"       if %!index; 	
 	   $args ~= ", columns=['{%!columns.&sbv.join("', '")}']"   if %!columns; 	
-
     }
-
+  
     method TWEAK {
-#`[[
-	# handle data => Array of Pairs 
 
-        if @!data.first ~~ Pair {
+        given @!data.first {
 
-            die "index not permitted if data is Array of Pairs" if %!index;
+            # data arg is 1d Array of Pairs (label => Series)
+            when Pair {
+                die "columns / index not permitted if data is Array of Pairs" if %!index || %!columns;
 
-            @!data = gather {
-                for @!data -> $p {
-                    take $p.value;
-                    %!index{$p.key} = $++
+                my $row-count = 0;
+                @!data.map( $row-count max= *.value.elems );
+
+                my @index  = 0..^$row-count;
+                my @labels = @!data.map(*.key);
+
+                # make (or update) each Series with column key as name, index as index
+                my @series = gather {
+                    for @!data -> $p {
+                        my $name = ~$p.key;
+                        given $p.value {
+                            # handle Series/Array with row-elems (auto index)   #TODO: avoid Series.new
+                            when Series { take Series.new( $_.data, :$name, dtype => ::($_.dtype) ) }
+                            when Array  { take Series.new( $_, :$name ) }
+
+                            # handle Scalar items (set index to auto-expand)    #TODO: lazy expansion
+                            when Str|Real|Date { take Series.new( $_, :$name, :@index ) }
+                        }
+                    }
+                }.Array;
+
+                # clear and load data
+                @!data = [];
+                $.load-from-series: row-count => +@index, |@series;
+
+                # make index Hash (row label => pos) 
+                my $j = 0;
+                %!index{~$j} = $j++ for ^@index;
+
+                # make columns Hash (col label => pos) 
+                my $i = 0;
+                %!columns{@labels[$i]} = $i++ for ^@labels;
+            } 
+
+            # data arg is 1d Array of Series (cols)
+            when Series {
+                die "columns.elems != data.first.elems" if ( %!columns && %!columns.elems != @!data.first.elems );
+
+                my $row-count = @!data.first.elems;
+                my @series = @!data; 
+
+                # clear and load data (and columns)
+                @!data = [];
+                $.load-from-series: :$row-count, |@series;
+
+                # make index Hash
+                %!index = @series.first.index;
+            }
+
+            # data arg is 1d Array of DataSlice (rows)
+            when Dan::DataSlice {
+                my @slices = @!data; 
+
+                # clear and load data (and index)
+                @!data = [];
+                $.load-from-slices: @slices;
+
+                # make columns Hash
+                %!columns = @slices.first.index;
+            }
+
+            # data arg is 2d Array (already) 
+            default {
+                die "columns.elems != data.first.elems" if ( %!columns && %!columns.elems != @!data.first.elems );
+
+                if ! %!index {
+                    [0..^@!data.elems].map( {%!index{$_.Str} = $_} );
                 }
-            }.Array
-	}
-#]]
+                if ! %!columns {
+                    @alphi[0..^@!data.first.elems].map( {%!columns{$_} = $++} ).eager;
+                }
+                #no-op
+            } 
+        }
 
-	#| handle implicit index
-	if ! %!index {
-	    %!index = gather {
-		for 0..^@!data {
-		    take ( $_ => $_ )
-		}
-	    }.Hash
-	}
-  
-	#| handle implicit columns
-	if ! %!columns {
-	    %!columns = gather {
-		for 0..^@!data.first {
-		    take ( @alphi[$_] => $_ )
-		}
-	    }.Hash
-	}
-  
 	my $args = self.prep-args;
 
 # since Inline::Python will not pass a DataFrame class back and forth
@@ -540,8 +611,8 @@ class RakuDataFrame:
 
 	$!py.run($py-str);
 	$!po = $!py.call('__main__', 'RakuDataFrame');
-    }
 
+    }
     #### Info Methods #####
 
     method Str { 
@@ -767,22 +838,7 @@ role DataFrame does Positional does Iterable is export(:ALL) {
     has Int         %.columns;          #column index
     has Str         @.dtypes;
 
-    ### Contructors ###
-
-    # Positional data array arg => redispatch as Named
-    multi method new( @data, *%h ) {
-        samewith( :@data, |%h )
-    }
-
-    # accept index as List, make Hash
-    multi method new( List:D :$index, *%h ) {
-        samewith( index => $index.map({ $_ => $++ }).Hash, |%h )
-    }
-
-    # accept columns as List, make Hash
-    multi method new( List:D :$columns, *%h ) {
-        samewith( columns => $columns.map({ $_ => $++ }).Hash, |%h )
-    }
+    ### Constructors ###
 
     # helper functions
     method load-from-series( :$row-count, *@series ) {
