@@ -14,8 +14,8 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 - DataFrame
 -- constructors
 -- accessors
-^^ DONE
 -- pd methods
+^^ DONE
 -- pull (to Raku-side attrs)
 -- splice
 -- concat
@@ -239,8 +239,8 @@ class RakuSeries:
 
     #| set raku attrs to rs_array / rs_index
     method pull {
-	%!index = $.index;
-	@!data = $!po.rs_values;
+	%!index   = $.index;
+	@!data    = $!po.rs_values;
     }
 
     #### MAC Methods #####
@@ -683,9 +683,9 @@ class RakuDataFrame:
 
     #| set raku attrs to rd_array / rd_index / rd_columns
     method pull {
-	%!index = $.index;
+	%!index   = $.index;
 	%!columns = $.columns;
-	@!data = $!po.rd_values;
+	@!data    = $!po.rd_values;
     }
 
     ### Mezzanine methods ###  
@@ -704,6 +704,7 @@ class RakuDataFrame:
 	$!po.rd_describe()
     }
 
+#`[
     method fillna {
         self.map(*.map({ $_ //= NaN }).eager);
     }
@@ -711,8 +712,11 @@ class RakuDataFrame:
     method series( $k ) {
         self.[*]{$k}
     }
+#]
 
     method sort( &cruton ) {  #&custom-routine-to-use
+	$.pull;
+
         my $i;
         loop ( $i=0; $i < @!data; $i++ ) {
             @!data[$i].push: %!index.&sbv[$i]
@@ -724,10 +728,13 @@ class RakuDataFrame:
         loop ( $i=0; $i < @!data; $i++ ) {
             %!index{@!data[$i].pop} = $i
         }
-        self
+
+	DataFrame.new( :%!index, :%!columns, :@!data )
     }
 
     method grep( &cruton ) {  #&custom-routine-to-use
+	$.pull;
+
         my $i;
         loop ( $i=0; $i < @!data; $i++ ) {
             @!data[$i].push: %!index.&sbv[$i]
@@ -739,7 +746,8 @@ class RakuDataFrame:
         loop ( $i=0; $i < @!data; $i++ ) {
             %!index{@!data[$i].pop} = $i
         }
-        self
+
+	DataFrame.new( :%!index, :%!columns, :@!data )
     }
 
     ### Role Support ###

@@ -116,16 +116,15 @@ say df >>+<< df;
 
 # Transpose
 say ~df.T;                  
-#]
 
-say "---------------------------------------------";
 # Describe
 say ~df[0..^3]^;            # head
 say ~df[(*-3..*-1)]^;       # tail
 say ~df.shape;
 df.describe;
+#]
 
-#`[
+say "---------------------------------------------";
 # Sort
 say ~df.sort: { .[1] };         # sort by 2nd col (ascending)
 say ~df.sort: { -.[1] };        # sort by 2nd col (descending)
@@ -133,6 +132,7 @@ say ~df.sort: { df[$++]<C> };   # sort by col C
 say ~df.sort: { df.ix[$++] };   # sort by index
 
 # Grep (binary filter)
-say ~df.grep( { .[1] < 0.5 } );                                # by 2nd column 
+#say ~df.grep( { .[1] < 0.5 } );                                # by 2nd column 
 say ~df.grep( { df.ix[$++] eq <2022-01-02 2022-01-06>.any } ); # by index (multiple) 
+#`[
 #]
