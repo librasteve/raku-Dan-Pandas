@@ -80,6 +80,7 @@ my \df = DataFrame.new( [[rand xx 4] xx 6], index => dates, columns => <A B C D>
 #my \df = DataFrame.new( [[rand xx 4] xx 6] );
 say ~df;
 
+#`[
 say "---------------------------------------------";
 
 # Data Accessors [row;col]
@@ -95,14 +96,43 @@ say df{"2022-01-03"}[1];
 # Object Accessors & Slices (see note 1)
 say ~df[0];                 # 1d Row 0 (DataSlice)
 say ~df[*]<A>;              # 1d Col A (Series)
-#dd df[0..*-2];
 say ~df[0..*-2][1..*-1];    # 2d DataFrame
-
-die;
-#`[
 say ~df{dates[0..1]}^;      # the ^ postfix converts an Array of DataSlices into a new DataFrame
-
-say "---------------------------------------------";
 #]
 
+#`[
+say "---------------------------------------------";
+### DataFrame Operations ###
 
+# 2d Map/Reduce
+say df.map(*.map(*+2).eager);
+say [+] df[*;1];
+say [+] df[1;*];
+say [+] df[*;*];
+
+# Hyper
+say df >>+>> 2;
+say df >>+<< df;
+
+# Transpose
+say ~df.T;                  
+#]
+
+say "---------------------------------------------";
+# Describe
+say ~df[0..^3]^;            # head
+say ~df[(*-3..*-1)]^;       # tail
+say ~df.shape;
+df.describe;
+
+#`[
+# Sort
+say ~df.sort: { .[1] };         # sort by 2nd col (ascending)
+say ~df.sort: { -.[1] };        # sort by 2nd col (descending)
+say ~df.sort: { df[$++]<C> };   # sort by col C
+say ~df.sort: { df.ix[$++] };   # sort by index
+
+# Grep (binary filter)
+say ~df.grep( { .[1] < 0.5 } );                                # by 2nd column 
+say ~df.grep( { df.ix[$++] eq <2022-01-02 2022-01-06>.any } ); # by index (multiple) 
+#]
