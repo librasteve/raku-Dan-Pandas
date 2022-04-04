@@ -22,6 +22,8 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 -- 2-arity pd methods 
 -- coerce to Dan::DataFrame
 -- new from Dan::DataFrame
+- Snagging
+-- move Series to external splice/concat model?
 - Big Pic
 -- ix index reindex behaviour
 -- disjoint keys (use reindex)
@@ -123,10 +125,10 @@ role Series does Positional does Iterable is export {
 	}
     }
 
-    method prep-args {
+    method prep-py-args {
 	my ( @qdata, $args );
 
-	@qdata = @!data.first ~~ Str ?? @!data.map({qq/\"$_\"/}) !! @!data;
+	@qdata = @!data.map({$_ ~~ Str ?? qq/\"$_\"/ !! $_ });
 
 	$args  = "[{@qdata.join(', ')}]";
 	$args ~~ s:g/NaN/np.nan/;
@@ -160,7 +162,7 @@ role Series does Positional does Iterable is export {
 	    }.Hash
 	}
   
-	my $args = self.prep-args;
+	my $args = self.prep-py-args;
 
 # since Inline::Python will not pass a Series class back and forth
 # we make and instantiate a standard class 'RakuSeries' as container
@@ -278,7 +280,7 @@ class RakuSeries:
         %!index = @aop.map({$_.key => $++});
         @!data  = @aop.map(*.value);
 
-	my $args = self.prep-args;
+	my $args = self.prep-py-args;
 	$!po.rs_push($args)
     }
 
@@ -405,7 +407,7 @@ class RakuSeries:
 
 }
 
-role Categorical does Series is export {
+role Categorical is Series is export {
 }
 
 role DataFrame does Positional does Iterable is export {
@@ -421,6 +423,11 @@ role DataFrame does Positional does Iterable is export {
     # Positional data array arg => redispatch as Named
     multi method new( @data, *%h ) {
         samewith( :@data, |%h )
+    }
+
+    # from Dan::DataFrame 
+    multi method new( Dan::DataFrame:D \s ) {
+        samewith( name => s.name, data => s.data, index => s.index )
     }
 
     submethod BUILD( :@data, :$index, :$columns ) {
@@ -460,19 +467,24 @@ role DataFrame does Positional does Iterable is export {
 
             @!data[$i] := @slices[$i].data
         }
+	$.pull
     }
 
     method prep-py-args {
-	my @rows = gather {
-            loop ( my $i=0; $i < @!data; $i++ ) {
-		take "[{@!data[$i;*].join(', ')}]"
+	my ( @qdata, @rows, $args );
+
+	@qdata = @!data.map(*.map({$_ ~~ Str ?? qq/\"$_\"/ !! $_ }));
+
+	@rows = gather {
+            loop ( my $i=0; $i < @qdata; $i++ ) {
+		take "[{@qdata[$i;*].join(', ')}]"
             }
 	}
 
-	my $args  = "[{@rows.join(', ')}]";
-	   $args ~~ s:g/NaN/np.nan/;
-	   $args ~= ", index=['{%!index.&sbv.join("', '")}']"       if %!index; 	
-	   $args ~= ", columns=['{%!columns.&sbv.join("', '")}']"   if %!columns; 	
+	$args  = "[{@rows.join(', ')}]";
+	$args ~~ s:g/NaN/np.nan/;
+	$args ~= ", index=['{%!index.&sbv.join("', '")}']"       if %!index; 	
+	$args ~= ", columns=['{%!columns.&sbv.join("', '")}']"   if %!columns; 	
     }
   
     sub prep-py-str( $args ) {
@@ -643,12 +655,10 @@ class RakuDataFrame:
 	$!po.rd_dtypes()
     }
 
-#`[[
-    method Dan-Series {
+    method Dan-DataFrame {
 	$.pull;
-	Dan::Series.new( :$!name, :@!data, :%!index )
+	Dan::DataFrame.new( :@!data, :%!index, :%!columns )
     }
-#]]
 
     #| get index as Array
     multi method ix {
@@ -717,11 +727,12 @@ class RakuDataFrame:
     method fillna {
         self.map(*.map({ $_ //= NaN }).eager);
     }
+#]
 
     method series( $k ) {
-        self.[*]{$k}
+        my $se = self.[*]{$k};
+	$se
     }
-#]
 
     method sort( &cruton ) {  #&custom-routine-to-use
 	$.pull;
@@ -802,89 +813,42 @@ class RakuDataFrame:
         @!data.hyper
     }
 
-    ### Splicing ###
+    ### Splice ###
 
-    #| reset attributes
-    method reset( :$axis ) {
+    #| get self as a Dan::DataFrame, perform splice operation and push back
+    method splice( DataFrame:D: $start = 0, $elems?, :ax(:$axis), *@replace ) {
 
-        @!data = [];
+	my $dandy = self.Dan-DataFrame;
+	my @res = $dandy.splice( $start, $elems, :$axis, |@replace );
 
-        if ! $axis {
-            %!index = %()
-        } else {
-            #@!dtypes  = [];
-            %!columns = %()
-        }
-    }
+        %!index   = $dandy.index;
+	%!columns = $dandy.columns;
+        @!data    = $dandy.data;
 
-    #| get as Array or Array of Pairs - [index|columns =>] DataSlice|Series
-    method get-ap( :$axis, :$pair ) {
-        given $axis, $pair {
-            when 0, 0 {
-                self.[*]
-            }
-            when 0, 1 {
-                my @slices = self.[*];
-                self.ix.map({ $_ => @slices[$++] })
-            }
-            when 1, 0 {
-                self.cx.map({self.series($_)}).Array
-            }
-            when 1, 1 {
-                my @series = self.cx.map({self.series($_)}).Array;
-                self.cx.map({ $_ => @series[$++] })
-            }
-        }
-    }
+	my $args = self.prep-py-args;
+	$!po.rd_push($args);
 
-    #| set from Array or Array of Pairs - [index|columns =>] DataSlice|Series
-    method set-ap( :$axis, :$pair, *@set ) {
-
-        self.reset: :$axis;
-
-        given $axis, $pair {
-            when 0, 0 {                         # row - array
-                self.load-from-slices: @set
-            }
-            when 0, 1 {                         # row - aops 
-dd @set;
-                self.load-from-slices: @set.map(*.value);
-#iamerejh
-say 2;
-                #self.ix: @set.map(*.key)
-            }
-            when 1, 0 {                         # col - array
-                self.load-from-series: row-count => @set.first.elems, |@set
-            }
-            when 1, 1 {                         # col - aops
-                self.load-from-series: row-count => @set.first.value.elems, |@set.map(*.value);
-                self.cx: @set.map(*.key)
-            }
-        }
-    }
-
-    sub clean-axis( :$axis ) {
-        given $axis {
-            when ! .so || /row/ { 0 }
-            when   .so || /col/ { 1 }
-        }
-    }
-
-    #| splice as Array or Array of Pairs - [index|columns =>] DataSlice|Series
-    #| viz. https://docs.raku.org/routine/splice
-    method splice( DataFrame:D: $start = 0, $elems?, :ax(:$axis) is copy, *@replace ) {
-	$.pull;
-
-           $axis = clean-axis(:$axis);
-        my $pair = @replace.first ~~ Pair ?? 1 !! 0;
-
-        my @wip = self.get-ap: :$axis, :$pair;
-        my @res = @wip.splice: $start, $elems//*, @replace;   # just an Array splice
-                  self.set-ap: :$axis, :$pair, @wip;
-
-#push
         @res
     }
+
+    ### Concat ###
+
+    #| get self as a Dan::DataFrame, perform concat operation and push back
+    method concat( DataFrame:D $dfr, :ax(:$axis), :jn(:$join), :ii(:$ignore-index) ) {
+
+	my $dandy = self.Dan-DataFrame;
+	my @res = $dandy.concat( $dfr, :$axis, :$join, :$ignore-index );
+
+        %!index   = $dandy.index;
+	%!columns = $dandy.columns;
+        @!data    = $dandy.data;
+
+	my $args = self.prep-py-args;
+	$!po.rd_push($args);
+
+        @res
+    }
+
 }
 
 #`[[

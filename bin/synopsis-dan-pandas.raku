@@ -155,17 +155,17 @@ say "---------------------------------------------";
 #]
 
 # row-wise splice:
-my $ds = df2[1];                        # get a DataSlice 
-#say 'yo';
-$ds.splice($ds.index<D>,1,7);           # tweak it a bit
-say ~$ds;
+my $ds = df2[0];                        # get a DataSlice 
+$ds.splice($ds.index<A>,1,7);           # tweak it a bit
 df2.splice( 1, 2, [j => $ds] );         # default
 say ~df2;
-#`[
 
 # column-wise splice:
-my $se = df2.series: <a>;               # get a Series 
-$se.splice(2,1,7);                      # tweak it a bit
-df2.splice( :ax, 1, 2, [K => $se] );    # axis => 1
+my $se = df2.series: <A>;               # get a Series 
+#iamerejh
+$se.splice(2,1,8);                      # tweak it a bit
+say ~$se;
+#df2.splice( :ax, 1, 2, [K => $se] );    # axis => 1
 
+#`[
 #]
