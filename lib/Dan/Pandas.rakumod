@@ -29,10 +29,11 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 -- disjoint keys (use reindex)
 -- review Dan::Series to better align codebases (2x2)
 -- duplicate keys - outlaw
---- remove name from Dan::Series::DataFrame
+-- remove name attr from Dan::Series::DataFrame
 - v2
+-- actually make a pd.Categorical
 --? parse Pandas methods (viz. https://stackoverflow.com/questions/71667086)
---? offer dyadic operators (eg. +-*/ for Series & DataFrames)
+--? offer dyadic operators (eg. +-*/) for Series & DataFrames
 --? support Python Timeseries / DatetimeIndex
 #]
 
@@ -407,7 +408,7 @@ class RakuSeries:
 
 }
 
-role Categorical is Series is export {
+role Categorical does Series is export {
 }
 
 role DataFrame does Positional does Iterable is export {
@@ -1091,7 +1092,7 @@ sub sliced-slices( @aods, @s ) {
     }   
 }
 sub make-series( @sls ) {
-    my @data  = @sls.map({ $_.data[0] });
+    my @data  = @sls.map({ $_.data[0] }); 
     my @index = @sls.map({ $_.name[0] });
     my $name  = @sls.first.index.&sbv[0];
 
@@ -1125,7 +1126,7 @@ multi postcircumfix:<{ }>( DataFrame:D $df, @ks ) is export {
     $df[$df.index{@ks}]
 }
 
-### Override second subscript [j] to make DataFrame
+### Override second assoc subscript {j} to make DataFrame
 
 multi postcircumfix:<{ }>( Dan::DataSlice @aods , $k ) is export {
     my $p = @aods.first.index{$k};

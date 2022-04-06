@@ -151,8 +151,8 @@ say df2.data;
 say df2.dtypes;
 say df2.index;    #Hash (name => row number)   -or- df.ix; #Array
 say df2.columns;  #Hash (label => col number)  -or- df.cx; #Array
-say "---------------------------------------------";
 #]
+say "---------------------------------------------";
 
 # row-wise splice:
 my $ds = df2[0];                        # get a DataSlice 
@@ -161,11 +161,12 @@ df2.splice( 1, 2, [j => $ds] );         # default
 say ~df2;
 
 # column-wise splice:
-my $se = df2.series: <A>;               # get a Series 
+dd my $se = df2[*]<A>;               # get a Series 
+#dd my $se = df2.series: <A>;               # get a Series 
+#`[
 #iamerejh
 $se.splice(2,1,8);                      # tweak it a bit
 say ~$se;
 #df2.splice( :ax, 1, 2, [K => $se] );    # axis => 1
 
-#`[
 #]
