@@ -285,37 +285,17 @@ class RakuSeries:
 	$!po.rs_push($args)
     }
 
-    #| splice as Array of values or Array of Pairs
+    #| splice as Array of Pairs
     #| viz. https://docs.raku.org/routine/splice
     method splice( Dan::Pandas::Series:D: $start = 0, $elems?, *@replace ) {
-        given @replace {
-            when .first ~~ Pair {
-                my @aop = self.aop;
-                my @res = @aop.splice($start, $elems//*, @replace);
-                self.aop: @aop;
-                @res
-            }
-            default {
-                my @res = @!data.splice($start, $elems//*, @replace); 
-                self.fillna; 
-                @res
-            }
-        }
-    }
+	my @res = @!data.splice($start, $elems//*, @replace); 
 
-    #| set empty data slots to Nan
-    method fillna {
-        self.aop.grep(! *.value.defined).map({ $_.value = NaN });
-    }
+	@!data.map({ $_ //= NaN }).eager;
 
-    #| drop index and data when Nan
-    method dropna {
-        self.aop: self.aop.grep(*.value ne NaN);
-    }
+	my $args = self.prep-py-args;
+	$!po.rs_push($args);
 
-    #| drop index and data when empty 
-    method dropem {
-        self.aop: self.aop.grep(*.value.defined).Array;
+	@res
     }
 
     # concat
@@ -724,15 +704,8 @@ class RakuDataFrame:
 	$!po.rd_describe()
     }
 
-#`[
-    method fillna {
-        self.map(*.map({ $_ //= NaN }).eager);
-    }
-#]
-
     method series( $k ) {
-        my $se = self.[*]{$k};
-	$se
+        self.[*]{$k}
     }
 
     method sort( &cruton ) {  #&custom-routine-to-use
@@ -1031,18 +1004,6 @@ role DataFrame does Positional does Iterable is export(:ALL) {
 
         self
     }
-
-    ### Mezzanine methods ###  
-    # (these use Accessors) #
-
-    method fillna {
-        self.map(*.map({ $_ //= NaN }).eager);
-    }
-
-    method series( $k ) {
-        self.[*]{$k}
-    }
-
 }
 #]]
 
