@@ -159,12 +159,33 @@ say "---------------------------------------------";
 my $ds = df2[0];                        # get a DataSlice 
 $ds.splice($ds.index<A>,1,7);           # tweak it a bit
 df2.splice( 1, 2, [j => $ds] );         # default
-#]
 
 # column-wise splice:
-dd my $se = df2[*]<D>;               	# get a Series 
+my $se = df2[*]<D>;               	# get a Series 
 $se.splice(2,1,8);                      # tweak it a bit
-say ~$se;
 df2.splice( :ax, 1, 2, [K => $se] );    # axis => 1
-say ~df2;
 
+say ~df2;
+#]
+
+my \dfa = DataFrame.new(
+        [['a', 1], ['b', 2]],
+        columns => <letter number>,
+);
+say ~dfa;
+dd dfa;
+
+my \dfc = DataFrame.new(
+        [['c', 3, 'cat'], ['d', 4, 'dog']],
+        columns => <animal letter number>,
+);
+say ~dfc;
+
+dd my $danse = dfa.Dan-DataFrame;
+dd my $danot = dfc.Dan-DataFrame;
+$danse.concat($danot);
+say ~$danse;
+
+say "---------------------------------------------";
+dfa.concat(dfc);
+say ~dfa;

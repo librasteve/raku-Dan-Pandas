@@ -15,8 +15,8 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 -- constructors
 -- accessors
 -- pull (to Raku-side attrs)
-^^ DONE
 -- splice
+^^ DONE
 -- concat
 -- pd methods
 -- 2-arity pd methods 
@@ -43,10 +43,12 @@ use Inline::Python;
 # generates default column labels
 constant @alphi = 'A'..∞; 
 
+#`[
 # sorts Hash by value, returns keys (poor woman's Ordered Hash)
 sub sbv( %h --> Seq ) is export {
     %h.sort(*.value).map(*.key)
 }
+#]
 
 #| singleton pattern for shared Python context 
 #| viz. https://docs.raku.org/language/classtut
@@ -792,12 +794,13 @@ class RakuDataFrame:
     #| get self as a Dan::DataFrame, perform splice operation and push back
     method splice( DataFrame:D: $start = 0, $elems?, :ax(:$axis), *@replace ) {
 
-	my $dandy = self.Dan-DataFrame;
-	my @res = $dandy.splice( $start, $elems, :$axis, |@replace );
+	my $danse = self.Dan-DataFrame;
 
-        %!index   = $dandy.index;
-	%!columns = $dandy.columns;
-        @!data    = $dandy.data;
+	my @res = $danse.splice( $start, $elems, :$axis, |@replace );
+
+        %!index   = $danse.index;
+	%!columns = $danse.columns;
+        @!data    = $danse.data;
 
 	my $args = self.prep-py-args;
 	$!po.rd_push($args);
@@ -806,206 +809,25 @@ class RakuDataFrame:
     }
 
     ### Concat ###
+    #| get self & other as Dan::DataFrames, perform concat operation and push back
+    method concat( DataFrame:D $dfr, :ax(:$axis), :jn(:$join) = 'outer', :ii(:$ignore-index) ) {
 
-    #| get self as a Dan::DataFrame, perform concat operation and push back
-    method concat( DataFrame:D $dfr, :ax(:$axis), :jn(:$join), :ii(:$ignore-index) ) {
+	my $danse = self.Dan-DataFrame;
+	my $danot = $dfr.Dan-DataFrame;
 
-	my $dandy = self.Dan-DataFrame;
-	my @res = $dandy.concat( $dfr, :$axis, :$join, :$ignore-index );
+	my @res = $danse.concat( $danot, :$axis, :$join, :$ignore-index );
 
-        %!index   = $dandy.index;
-	%!columns = $dandy.columns;
-        @!data    = $dandy.data;
+        %!index   = $danse.index;
+	%!columns = $danse.columns;
+        @!data    = $danse.data;
 
 	my $args = self.prep-py-args;
 	$!po.rd_push($args);
 
         @res
     }
-
 }
 
-#`[[
-
-### Declarations & Helper Functions ###
-
-# set mark for index/column duplicates
-constant $mark = '⋅'; # unicode Dot Operator U+22C5
-my regex notmark { <-[⋅]> }
-
-role DataFrame does Positional does Iterable is export(:ALL) {
-#...
-
-
-    # concat
-    method concat( DataFrame:D $dfr, :ax(:$axis) is copy,           #TODO - refactor for speed?   
-                     :jn(:$join) = 'outer', :ii(:$ignore-index) ) {
-
-        $axis = clean-axis(:$axis);
-        my $ax = ! $axis;        #AX IS INVERSE AXIS
-
-        my ( $start,   $elems   );
-        my ( @left,    @right   );
-        my ( $l-empty, $r-empty );
-        my ( %l-drops, %r-drops );
-
-        if ! $axis {            # row-wise
-
-            # set extent of main slice 
-            $start = self.index.elems;
-            $elems = $dfr.index.elems;
-
-            # take stock of cols
-            @left   = self.cx;
-            @right  = $dfr.cx;
-
-            # make some empties
-            $l-empty = Series.new( NaN, index => [self.ix] );
-            $r-empty = Series.new( NaN, index => [$dfr.ix] );
-
-            # load drop hashes
-            %l-drops = self.columns;
-            %r-drops = $dfr.columns;
-
-        } else {                # col-wise
-
-            # set extent of main slice
-            $start = self.columns.elems;
-            $elems = $dfr.columns.elems;
-
-            # take stock of rows
-            @left   = self.ix;
-            @right  = $dfr.ix;
-
-            # make some empties
-            $l-empty = DataSlice.new( data => [NaN xx self.cx.elems], index => [self.cx] );
-            $r-empty = DataSlice.new( data => [NaN xx $dfr.cx.elems], index => [$dfr.cx] );
-
-            # load drop hashes
-            %l-drops = self.index;
-            %r-drops = $dfr.index;
-
-        }
-
-        my @inner  = @left.grep(  * ∈ @right );
-        my @l-only = @left.grep(  * ∉ @inner );
-        my @r-only = @right.grep( * ∉ @inner );
-        my @outer  = |@l-only, |@r-only;
-
-        # helper functions for adjusting columns
-
-        sub add-ronly-to-left {
-            for @r-only -> $name {
-                self.splice: :$ax, *, *, ($name => $l-empty)
-            }
-        }
-        sub add-lonly-to-right {
-            for @l-only -> $name {
-                $dfr.splice: :$ax, *, *, ($name => $r-empty)
-            }
-        }
-        sub drop-outers-from-left {
-            for @l-only -> $name {
-                self.splice: :$ax, %l-drops{$name}, 1
-            }
-        }
-        sub drop-outers-from-right {
-            for @r-only -> $name {
-                $dfr.splice: :$ax, %r-drops{$name}, 1
-            }
-        }
-
-        # re-arrange left and right 
-        given $join {
-            when /^o/ {          #outer
-                add-ronly-to-left;
-                add-lonly-to-right;
-            }
-            when /^i/ {          #inner
-                drop-outers-from-left;
-                drop-outers-from-right;
-            }
-            when /^l/ {          #left
-                add-lonly-to-right;
-                drop-outers-from-right;
-            }
-            when /^r/ {          #right
-                add-ronly-to-left;
-                drop-outers-from-left;
-            }
-        }
-
-        # load new row/col info
-        my ( @new-left, @new-right );
-        my ( %new-left, %new-right );
-
-        if ! $axis {    #row-wise
-            @new-left  = self.cx;       @new-right = $dfr.cx;
-            %new-left  = self.columns;  %new-right = $dfr.columns;
-        } else {        #column-wise
-            @new-left  = self.ix;       @new-right = $dfr.ix;
-            %new-left  = self.index;    %new-right = $dfr.index;
-        }
-
-        # align new right to new left
-        for 0..^+@new-left -> $i {
-            if @new-left[$i] ne @new-right[$i] {
-                my @mover = $dfr.splice: :$ax, %new-right{@new-left[$i]}, 1; 
-                $dfr.splice: :$ax, $i, 0, @mover; 
-            }
-        }
-
-        # load name duplicates
-        my $dupes = ().BagHash;
-        my ( @new-main, %new-main );
-
-        if ! $axis {    #row-wise
-            @new-main = self.ix;
-            %new-main = self.index;
-        } else {        #column-wise
-            @new-main = self.cx;
-            %new-main = self.columns;
-        }
-
-        @new-main.map({ $_ ~~ / ^ (<notmark>*) /; $dupes.add(~$0) }); 
-
-        # load @replace as array of pairs
-        my @replace = $dfr.get-ap( :$axis, pair => 1 );
-
-        # handle name duplicates
-        @replace.map({ 
-            if %new-main{$_.key}:exists {
-                #warn "duplicate key {$_.key}";
-
-                $_.key ~~ / ^ (<notmark>*) /;
-                my $b-key = ~$0;
-                my $n-key = $b-key ~ $mark ~ $dupes{$b-key};
-
-                $_ = $n-key => $_.value; 
-                $dupes{$b-key}++;
-            } 
-        });
-
-        # do the main splice
-        self.splice: :$axis, $start, $elems, @replace;    
-
-        # handle ignore-index
-        if $ignore-index {
-            if ! $axis {
-                my $size = self.ix.elems;
-                self.index = %();
-                self.index{~$_} = $_ for 0..^$size
-            } else {
-                my $size = self.cx.elems;
-                self.columns = %();
-                self.columns{~$_} = $_ for 0..^$size
-            }
-        } 
-
-        self
-    }
-}
-#]]
 
 ### Postfix '^' as explicit subscript chain terminator
 
