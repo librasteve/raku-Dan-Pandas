@@ -16,19 +16,19 @@ unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 -- accessors
 -- pull (to Raku-side attrs)
 -- splice
-^^ DONE
 -- concat
--- pd methods
--- 2-arity pd methods 
 -- coerce to Dan::DataFrame
 -- new from Dan::DataFrame
+-- pd methods
+-- 2-arity pd methods 
+^^ DONE
 - Snagging
--- move Series to external splice/concat model?
 - Big Pic
 -- ix index reindex behaviour
 -- disjoint keys (use reindex)
 -- review Dan::Series to better align codebases (2x2)
 -- duplicate keys - outlaw
+-- Dan to/from csv/json
 -- remove name attr from Dan::Series::DataFrame
 - v2
 -- actually make a pd.Categorical
@@ -494,13 +494,6 @@ class RakuDataFrame:
     def rd_columns(self):
         return(self.dataframe.columns)
 
-    def rd_reindex(self, new_index):
-        result = self.dataframe.reindex(new_index)
-        return(result)
-
-    def rd_size(self):
-        return(self.dataframe.size)
-
     def rd_values(self):
         array = self.dataframe.values
         result = array.tolist()
@@ -742,6 +735,20 @@ class RakuDataFrame:
         }
 
 	DataFrame.new( :%!index, :%!columns, :@!data )
+    }
+
+    ### Pandas Methods ###
+
+    multi method pd( $exp ) {
+	if $exp ~~ /'='/ {
+	    $!po.rd_exec( $exp )
+	} else {
+	    $!po.rd_eval( $exp )
+	}
+    }
+
+    multi method pd( $exp, Dan::Pandas::Series:D $other ) {
+	$!po.rd_eval2( $exp, $other.po )
     }
 
     ### Role Support ###

@@ -168,6 +168,7 @@ df2.splice( :ax, 1, 2, [K => $se] );    # axis => 1
 say ~df2;
 #]
 
+#`[
 my \dfa = DataFrame.new(
         [['a', 1], ['b', 2]],
         columns => <letter number>,
@@ -189,3 +190,16 @@ say ~$danse;
 say "---------------------------------------------";
 dfa.concat(dfc);
 say ~dfa;
+#]
+
+#[ pd methods
+df.pd: '.shape';
+df.pd: '.flags';
+df.pd: '.T';
+df.pd: '.to_json("test.json")';
+df.pd: '.to_csv("test.csv")';
+df.pd: '.iloc[2] = 23';
+df.pd: '.iloc[2]';
+say ~df;
+#]
+
