@@ -1,37 +1,16 @@
 unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 
 #`[TODOs
-- Series
--- constructors
--- accessors
--- pd methods
--- pull (to Raku-side attrs)
--- splice
--- concat
--- 2-arity pd methods 
--- coerce to Dan::Series (.Dan::Series)
--- new from Dan::Series
-- DataFrame
--- constructors
--- accessors
--- pull (to Raku-side attrs)
--- splice
--- concat
--- coerce to Dan::DataFrame
--- new from Dan::DataFrame
--- pd methods
--- 2-arity pd methods 
-^^ DONE
-- Snagging
 - Big Pic
--- ix index reindex behaviour
+-- ix index reindex behaviour (document)
 -- disjoint keys (use reindex)
--- review Dan::Series to better align codebases (2x2)
 -- duplicate keys - outlaw
 -- Dan to/from csv/json
+-- review Dan::Series to better align codebases (2x2)
 -- remove name attr from Dan::Series::DataFrame
 - v2
 -- actually make a pd.Categorical
+-- find some 2-arity pd method examples
 --? parse Pandas methods (viz. https://stackoverflow.com/questions/71667086)
 --? offer dyadic operators (eg. +-*/) for Series & DataFrames
 --? support Python Timeseries / DatetimeIndex
