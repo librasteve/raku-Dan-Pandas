@@ -43,12 +43,10 @@ use Inline::Python;
 # generates default column labels
 constant @alphi = 'A'..∞; 
 
-#`[
 # sorts Hash by value, returns keys (poor woman's Ordered Hash)
 sub sbv( %h --> Seq ) is export {
     %h.sort(*.value).map(*.key)
 }
-#]
 
 #| singleton pattern for shared Python context 
 #| viz. https://docs.raku.org/language/classtut
