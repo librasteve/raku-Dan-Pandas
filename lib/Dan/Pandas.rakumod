@@ -427,7 +427,8 @@ role DataFrame does Positional does Iterable is export {
 
             @!data[$i] := @slices[$i].data
         }
-	$.pull
+
+	#$.pull; #FIXME - rm this line as no object yet when called from TWEAK
     }
 
     method prep-py-args {
@@ -872,7 +873,7 @@ multi postcircumfix:<[ ]>( Dan::DataSlice @aods , Int $p ) is export {
 }
 
 #| make DataFrame from sliced Dan::DataSlices 
-multi postcircumfix:<[ ]>( Dan::DataSlice @aods , @s where Range|List ) is export {
+multi postcircumfix:<[ ]>( Dan::DataSlice @aods, @s where Range|List ) is export {
     DataFrame.new( sliced-slices(@aods, @s) )
 }
 multi postcircumfix:<[ ]>( Dan::DataSlice @aods, WhateverCode $p ) is export {

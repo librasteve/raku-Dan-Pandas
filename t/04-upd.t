@@ -5,7 +5,8 @@ use lib '../lib';
 use Test;
 plan 18;
 
-use Dan :ALL;
+use Dan;
+use Dan::Pandas;
 
 ## Series - Updates
 
@@ -13,10 +14,10 @@ my \s = $;
 my \t = $;
 
 s = Series.new([b=>1, a=>0, c=>2]);
-s.ix: <b c d>;
-is ~s, "b\t1\nc\t0\nd\t2\ndtype: Int, name: anon\n",                        's.ix';
+##s.ix: <b c d>; #can't use .ix to write index in Dan::Pandas
+is ~s, "b    1\na    0\nc    2\nName: anon, dtype: int64",                        's.ix';
 
-s.splice: *-1;
+s.splice: *-1;    #FIXME - how to pop Dan::Pandas 
 ok s.elems == 2,                                                            's.pop';
 
 s.splice( 1,2,(j => Nil) );
