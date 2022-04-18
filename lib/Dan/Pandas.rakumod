@@ -238,9 +238,14 @@ class RakuSeries:
     # TODO - adjust Dan::Series index / ix behaviour to match Pandas (same API)
 
     #| set index from Array (Dan::Series style) 
-    multi method ix( $new-index ) {
-	$!po.rs_reindex( $new-index )
+    multi method ix( @new-index ) {
+        %.index.keys.map: { %!index{$_}:delete };
+        @new-index.map:   { %!index{$_} = $++  };
+
+	my $args = self.prep-py-args;
+	$!po.rs_push($args)
     }
+
 
     #| reindex from Array (Pandas style)
     method reindex( @index ) {
@@ -264,21 +269,29 @@ class RakuSeries:
 	$!po.rs_push($args)
     }
 
-    #| splice as Array of Pairs
-    #| viz. https://docs.raku.org/routine/splice
-    method splice( Dan::Pandas::Series:D: $start = 0, $elems?, *@replace ) {
-	my @res = @!data.splice($start, $elems//*, @replace); 
+    ### Splice ###
+    #| get self as a Dan::Series, perform splice operation and push back
 
-	@!data.map({ $_ //= NaN }).eager;
+    method splice( Series:D: $start = 0, $elems?, :ax(:$axis), *@replace ) {
+
+	my $serse = self.Dan-Series;
+
+	my @res = $serse.splice( $start, $elems, :$axis, |@replace );
+
+        %!index   = $serse.index;
+        @!data    = $serse.data;
 
 	my $args = self.prep-py-args;
 	$!po.rs_push($args);
 
-	@res
+        @res
     }
 
-    # concat
+    ### Concat ###
+    #| concat done by way of aop splice
+
     method concat( Dan::Pandas::Series:D $dsr ) {
+
 	$.pull;
 
         %!index.map({ 
@@ -643,12 +656,18 @@ class RakuDataFrame:
     multi method ix( @new-index ) {
         %.index.keys.map: { %!index{$_}:delete };
         @new-index.map:   { %!index{$_} = $++  };
+
+	my $args = self.prep-py-args;
+	$!po.rd_push($args)
     }
 
     #| set columns (relabel) from Array
     multi method cx( @new-labels ) {
         %.columns.keys.map: { %!columns{$_}:delete };
         @new-labels.map:    { %!columns{$_} = $++  };
+
+	my $args = self.prep-py-args;
+	$!po.rd_push($args)
     }
 
     #### Sync Methods #####
@@ -775,8 +794,8 @@ class RakuDataFrame:
     }
 
     ### Splice ###
-
     #| get self as a Dan::DataFrame, perform splice operation and push back
+
     method splice( DataFrame:D: $start = 0, $elems?, :ax(:$axis), *@replace ) {
 
 	my $danse = self.Dan-DataFrame;
@@ -795,6 +814,7 @@ class RakuDataFrame:
 
     ### Concat ###
     #| get self & other as Dan::DataFrames, perform concat operation and push back
+
     method concat( DataFrame:D $dfr, :ax(:$axis), :jn(:$join) = 'outer', :ii(:$ignore-index) ) {
 
 	my $danse = self.Dan-DataFrame;

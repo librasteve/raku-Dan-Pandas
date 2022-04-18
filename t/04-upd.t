@@ -14,18 +14,18 @@ my \s = $;
 my \t = $;
 
 s = Series.new([b=>1, a=>0, c=>2]);
-##s.ix: <b c d>; #can't use .ix to write index in Dan::Pandas
-is ~s, "b    1\na    0\nc    2\nName: anon, dtype: int64",                        's.ix';
+s.ix: <b c d>;
+is ~s, "b    1\nc    0\nd    2\nName: anon, dtype: int64",			's.ix';
 
-s.splice: *-1;    #FIXME - how to pop Dan::Pandas 
-ok s.elems == 2,                                                            's.pop';
+s.splice: *-1;
+ok s<d> eq NaN,                                                            	's.pop';
 
-s.splice( 1,2,(j => Nil) );
-ok s.ix[1] eq 'j',                                                          's.splice';
+s.splice( 1,2,(j => NaN) );
+ok s.ix[1] eq 'j',                                                          	's.splice';
 
 s = Series.new([b=>1, a=>0, c=>2]);
 t = Series.new([f=>1, e=>0, d=>2]);
-ok (s.concat: t).ix[3] eq 'f',                                              's.concat';
+ok (s.concat: t).ix[3] eq 'f',                                              	's.concat';
 
 ## DataFrames - Updates 
 
@@ -39,16 +39,16 @@ my $df2 = DataFrame.new([
 ]);
 
 $df2.ix: <a b c d>;
-is $df2.index, "a\t0\nb\t1\nc\t2\nd\t3",                                            'df.ix';
+is $df2.index, "a\t0\nb\t1\nc\t2\nd\t3",                                        'df.ix';
 
 $df2.cx: <a b c d e f>;
-is $df2.dtypes, "a => Rat\nb => Date\nc => Num\nd => Int\ne => Str\nf => Str",      'df.cx';
+is $df2.series('a').dtype, "<class 'numpy.int64'>",			  	'df.cx';
 
 $df2.splice: *-1; 
-ok $df2.ix.elems == 3,                                                              'df.pop [row]';
+ok $df2.ix.elems == 3,                                                          'df.pop [row]';
 
 $df2.splice: :ax(1), *-1;
-ok $df2.cx.elems == 5,                                                              'df.pop [col]';
+ok $df2.cx.elems == 5,                                                          'df.pop [col]';
 
 my $df3 = DataFrame.new([
         A => 1.0,
@@ -62,16 +62,25 @@ my $df3 = DataFrame.new([
 my $ds = $df3[1];
 $ds.splice(3,1,(D => 7));
 $ds.name = '7';
+say ~$ds;
+say 1;
 
 my $se = $df3.series: <A>;
 $se.splice(2,1,(2 => 7));
-$se.name = 'X';
+#$se.name = 'X';       ##Dan::Pandas::Series name immutable, adjust Dan::Series to match
 
 $df3.splice(2,1,$ds);
-ok $df3[2]<D> == 7,                                                                 'df.splice array [row]';
+ok $df3[2]<D> == 7,                                                             'df.splice array [row]';
 
-$df3.splice( :ax(1),3,2,$se);
-ok $df3[2]<X> == 7,                                                                 'df.splice array [col]';
+#iamerejh
+say ~$df3;
+say ~$se;
+
+say ~$df3.splice( :ax(1),3,2,$se);
+say ~$df3;
+ok $df3[2]<A> == 7,                                                             'df.splice array [col]';
+
+die;
 
 my $df4 = DataFrame.new([
         A => 1.0,
