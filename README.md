@@ -128,6 +128,7 @@ df.describe;               # Describe
 say ~df.sort: {.[1]};      # Sort by 2nd col (ascending)
 say ~df.grep( { .[1] < 0.5 } );  # Grep (binary filter) by 2nd column
 
+say "---------------------------------------------";
 ### Splice ###
 
 my $ds = df2[0];                        # get a DataSlice
@@ -138,6 +139,7 @@ my $se = df2[*]<D>;                     # get a Series
 $se.splice(2,1,8);                      # tweak it a bit
 df2.splice( :ax, 1, 2, [K => $se] );    # column-wise splice: axis => 1
 
+say "---------------------------------------------";
 ### Concat ###
 
 my \dfa = DataFrame.new(
@@ -161,6 +163,7 @@ say ~dfa;
 1⋅1    dog      d     4.0
 #]
 
+say "---------------------------------------------";
 ### .pd Methods ###
 
 #The Dan::Pandas .pd method takes a Python method call string and handles it from raku:
