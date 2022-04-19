@@ -96,6 +96,7 @@ say u.^name;               #Dan::Series [coerce from Dan::Pandas::Series]
 my \v = Series.new( u );
 say ~v.^name;              #Dan::Pandas::Series [construct from Dan::Series]
 
+say "---------------------------------------------";
 ### DataFrames ###
 
 ## Dan Similarities...
@@ -104,18 +105,14 @@ my \dates = (Date.new("2022-01-01"), *+1 ... *)[^6];
 my \df = DataFrame.new( [[rand xx 4] xx 6], index => dates, columns => <A B C D> );
 say ~df;
 
-say "---------------------------------------------";
 # Accessors
-
 df[0;0];                   # Data Accessors [row;col]
 df[0;0] = 3;               # NOPE! <== unlike Dan, must use .pd method to set values, then optionally .pull
 df[0]<A>;                  # Cascading Accessors (mix Positional and Associative)
 df[0];                     # 1d Row 0 (DataSlice)
 df[*]<A>;                  # 1d Col A (Series)
 
-say "---------------------------------------------";
 # Operations
-
 [+] df[*;1];               # 2d Map/Reduce
 df >>+>> 2;                # Hyper
 df.T;                      # Transpose
@@ -125,15 +122,11 @@ df.describe;               # Describe
 df.sort: {.[1]};           # Sort by 2nd col (ascending)
 df.grep( {.[1] < 0.5} );   # Grep (binary filter) by 2nd column
 
-say "---------------------------------------------";
-### Splice ###
-
+# Splice
 df2.splice( 1, 2, [j => $ds] );         # row-wise splice:
 df2.splice( :ax, 1, 2, [K => $se] );    # column-wise splice: axis => 1
 
-say "---------------------------------------------";
-### Concat ###
-
+# Concat
 my \dfa = DataFrame.new( [['a', 1], ['b', 2]], columns => <letter number> ); 
 my \dfc = DataFrame.new( [['c', 3, 'cat'], ['d', 4, 'dog']], columns => <animal letter number> ); 
 
