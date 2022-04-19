@@ -110,51 +110,67 @@ say df[0;0];
 df[0;0] = 3;                #NOPE! <== unlike Dan, must use .pd method to set values, then optionally .pull
 
 # Smart Accessors (mix Positional and Associative)
-say df[0][0];
 say df[0]<A>;
-say df{"2022-01-03"}[1];
 
 # Object Accessors & Slices (see note 1)
 say ~df[0];                 # 1d Row 0 (DataSlice)
 say ~df[*]<A>;              # 1d Col A (Series)
-say ~df[0..*-2][1..*-1];    # 2d DataFrame
-say ~df{dates[0..1]}^;      # the ^ postfix converts an Array of DataSlices into a new DataFrame
-#]
 
 say "---------------------------------------------";
 ### DataFrame Operations ###
 
-# 2d Map/Reduce
-say df.map(*.map(*+2).eager);
-say [+] df[*;1];
-say [+] df[1;*];
-say [+] df[*;*];
+say [+] df[*;1];           # 2d Map/Reduce
+say df >>+>> 2;            # Hyper
+say ~df.T;                 # Transpose
+say ~df.shape;             # Shape
+df.describe;               # Describe
 
-# Hyper
-say df >>+>> 2;
-say df >>+<< df;
+say ~df.sort: {.[1]};      # Sort by 2nd col (ascending)
+say ~df.grep( { .[1] < 0.5 } );  # Grep (binary filter) by 2nd column
 
-# Transpose
-say ~df.T;
+### Splice ###
 
-# Describe
-say ~df[0..^3]^;            # head
-say ~df[(*-3..*-1)]^;       # tail
-say ~df.shape;
-df.describe;
+my $ds = df2[0];                        # get a DataSlice
+$ds.splice($ds.index<A>,1,7);           # tweak it a bit
+df2.splice( 1, 2, [j => $ds] );         # row-wise splice:
 
-say "---------------------------------------------";
-# Sort
-say ~df.sort: { .[1] };         # sort by 2nd col (ascending)
-say ~df.sort: { -.[1] };        # sort by 2nd col (descending)
-say ~df.sort: { df[$++]<C> };   # sort by col C
-say ~df.sort: { df.ix[$++] };   # sort by index
+my $se = df2[*]<D>;                     # get a Series
+$se.splice(2,1,8);                      # tweak it a bit
+df2.splice( :ax, 1, 2, [K => $se] );    # column-wise splice: axis => 1
 
-# Grep (binary filter)
-#say ~df.grep( { .[1] < 0.5 } );                                # by 2nd column
-say ~df.grep( { df.ix[$++] eq <2022-01-02 2022-01-06>.any } ); # by index (multiple)
+### Concat ###
 
+my \dfa = DataFrame.new(
+        [['a', 1], ['b', 2]],
+        columns => <letter number>,
+); 
 
+my \dfc = DataFrame.new(
+        [['c', 3, 'cat'], ['d', 4, 'dog']],
+        columns => <animal letter number>,
+); 
+
+dfa.concat(dfc);
+say ~dfa;
+
+#`[
+    letter number  animal
+0        a      1     NaN
+1        b      2     NaN
+0⋅1    cat      c     3.0
+1⋅1    dog      d     4.0
+#]
+
+### .pd Methods ###
+
+#The Dan::Pandas .pd method takes a Python method call string and handles it from raku:
+df.pd: '.shape';
+df.pd: '.flags';
+df.pd: '.T';
+df.pd: '.to_json("test.json")';
+df.pd: '.to_csv("test.csv")';
+df.pd: '.iloc[2] = 23';
+df.pd: '.iloc[2]';
 
 ```
 
