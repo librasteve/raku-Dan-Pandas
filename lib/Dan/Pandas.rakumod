@@ -1,22 +1,5 @@
 unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 
-#`[TODOs
-- Big Pic
--- ix index reindex behaviour (document)
--- disjoint keys (use reindex)
--- duplicate keys - outlaw
--- Dan to/from csv/json
--- review Dan::Series to better align codebases (2x2)
--- remove name attr from Dan::Series::DataFrame
-- v2
--- actually make a pd.Categorical
--- find some 2-arity pd method examples
---? parse Pandas methods (viz. https://stackoverflow.com/questions/71667086)
---? offer dyadic operators (eg. +-*/) for Series & DataFrames
---? support Python Timeseries / DatetimeIndex
-#]
-
-use Dan;
 use Inline::Python;
 
 # generates default column labels
@@ -234,8 +217,6 @@ class RakuSeries:
 
     #### MAC Methods #####
     #Moves, Adds, Changes#
-
-    # TODO - adjust Dan::Series index / ix behaviour to match Pandas (same API)
 
     #| set index from Array (Dan::Series style) 
     multi method ix( @new-index ) {

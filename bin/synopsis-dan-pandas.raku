@@ -5,7 +5,6 @@ use lib '../lib';
 use Dan;
 use Dan::Pandas;
 
-#`[[
 my \s = $;
 #my $index = {:a(0), :b(1), :c(2), :d(3), :e(4), :f(5)};
 #s = Series.new(data => [1, 3, 5, NaN, 6, 8], :$index, name => 'john' );
@@ -13,18 +12,19 @@ my \s = $;
 #s = Series.new(data => [1, 3, 5, NaN, 6, 8]);
 #s = Series.new([1, 3, 5, 6, 8]);
 #s = Series.new([1, 3, 5, NaN, 6, 8]);
-#s = Series.new( [rand xx 5], index => <a b c d e>);
-s = Series.new( [b=>1, a=>0, c=>2] );               #from Array of Pairs
+s = Series.new( [rand xx 5], index => <a b c d e>);
+#s = Series.new( [b=>1, a=>0, c=>2] );               #from Array of Pairs
 say ~s;
 
 #say s.dtype;
 #say s.ix;
 #say s.index;
-#say ~s.reindex(['d','e','f','g','h','i']);
+say ~s.reindex(['d','e','f','g','h','i']);
 #say s.elems;
 say s.pull;
 say ~s;
 
+#`[[
 #say s.map(*+2);
 #say [+] s; 
 #say s >>+>> 2; 
@@ -36,7 +36,6 @@ say s<c>;
 say ~s;
 
 s.splice(1,2,(j=>3)); 
-s.fillna;
 
 my \t = Series.new( [f=>1, e=>0, d=>2] );
 s.concat: t;
@@ -84,7 +83,6 @@ say ~df;
 say "---------------------------------------------";
 
 # Data Accessors [row;col]
-say df[0;0];
 say df[0;0];
 df[0;0] = 3;                # set value (not sure why this works, must manual push
 
@@ -168,24 +166,18 @@ df2.splice( :ax, 1, 2, [K => $se] );    # axis => 1
 say ~df2;
 #]
 
-#`[
+#[
 my \dfa = DataFrame.new(
         [['a', 1], ['b', 2]],
         columns => <letter number>,
 );
 say ~dfa;
-dd dfa;
 
 my \dfc = DataFrame.new(
         [['c', 3, 'cat'], ['d', 4, 'dog']],
         columns => <animal letter number>,
 );
 say ~dfc;
-
-dd my $danse = dfa.Dan-DataFrame;
-dd my $danot = dfc.Dan-DataFrame;
-$danse.concat($danot);
-say ~$danse;
 
 say "---------------------------------------------";
 dfa.concat(dfc);
