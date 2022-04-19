@@ -109,6 +109,52 @@ say "---------------------------------------------";
 say df[0;0];
 df[0;0] = 3;                #NOPE! <== unlike Dan, must use .pd method to set values, then optionally .pull
 
+# Smart Accessors (mix Positional and Associative)
+say df[0][0];
+say df[0]<A>;
+say df{"2022-01-03"}[1];
+
+# Object Accessors & Slices (see note 1)
+say ~df[0];                 # 1d Row 0 (DataSlice)
+say ~df[*]<A>;              # 1d Col A (Series)
+say ~df[0..*-2][1..*-1];    # 2d DataFrame
+say ~df{dates[0..1]}^;      # the ^ postfix converts an Array of DataSlices into a new DataFrame
+#]
+
+say "---------------------------------------------";
+### DataFrame Operations ###
+
+# 2d Map/Reduce
+say df.map(*.map(*+2).eager);
+say [+] df[*;1];
+say [+] df[1;*];
+say [+] df[*;*];
+
+# Hyper
+say df >>+>> 2;
+say df >>+<< df;
+
+# Transpose
+say ~df.T;
+
+# Describe
+say ~df[0..^3]^;            # head
+say ~df[(*-3..*-1)]^;       # tail
+say ~df.shape;
+df.describe;
+
+say "---------------------------------------------";
+# Sort
+say ~df.sort: { .[1] };         # sort by 2nd col (ascending)
+say ~df.sort: { -.[1] };        # sort by 2nd col (descending)
+say ~df.sort: { df[$++]<C> };   # sort by col C
+say ~df.sort: { df.ix[$++] };   # sort by index
+
+# Grep (binary filter)
+#say ~df.grep( { .[1] < 0.5 } );                                # by 2nd column
+say ~df.grep( { df.ix[$++] eq <2022-01-02 2022-01-06>.any } ); # by index (multiple)
+
+
 
 ```
 
