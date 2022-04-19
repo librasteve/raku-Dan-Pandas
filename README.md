@@ -26,9 +26,9 @@ The raku Dan [README.md](https://github.com/p6steve/raku-Dan/blob/main/README.md
 ```raku
 ### Series ###
 
-my \s = Series.new( [rand xx 5], index => <a b c d e>); 
-#  -or- Series.new( [b=>1, a=>0, c=>2] );               #from Array of Pairs
-#  -or- Series.new( data => [1, 3, 5, NaN, 6, 8], index => <a b c d e f>, name => 'john' );
+## Dan Similarities...
+
+my \s = Series.new( [rand xx 5], index => <a b c d e>);
 say ~s;
 
 #`[
@@ -39,6 +39,26 @@ d    0.593949
 e    0.141334
 Name: anon, dtype: float64                   #<== Dan::Pandas::Series has a Python numpy dtype
 #]
+
+# Methods
+s.dtype;
+s.ix;
+s.index;
+s.elems;
+s.map(*+2);
+s.splice(1,2,(j=>3));
+
+my \t = Series.new( [f=>1, e=>0, d=>2] );
+s.concat: t;
+
+# Operators
+[+] s;  
+s >>+>> 2; 
+s >>+<< s; 
+s[2];
+s<c>;
+
+## Dan Differences...
 
 say ~s.reindex(['d','e','f','g','h','i']);   #<== reindex Pandas style, padding NaN
 #`[
@@ -52,26 +72,6 @@ i         NaN
 Name: anon, dtype: float64
 
 s.pull;       #explicit pull operation synchronizes raku object attributes to latest Python values (@.dfata, %.index, %.columns)
-
-# Otherwise these do the same as raku Dan:
-given s {
-.dtype;
-.ix;
-.index;
-.elems;
-.map(*+2);
-.splice(1,2,(j=>3));
-}
-
-my \t = Series.new( [f=>1, e=>0, d=>2] );
-s.concat: t;
-
-# Operators are same as raku Dan also:
-[+] s;  
-s >>+>> 2; 
-s >>+<< s; 
-s[2];
-s<c>;
 
 #The Dan::Pandas .pd method takes a Python method call string and handles it from raku:
 s.pd: '.shape';
