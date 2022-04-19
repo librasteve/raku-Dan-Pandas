@@ -90,12 +90,9 @@ say ~my \prices = Series.new([1.1, 4.3, 2.2, 7.41, 2.89]);
 my \costs = quants; 
 costs.pd: '.mul', prices; 
 
-# You can round-trip to/from Dan::Series:
-my \u = s.Dan-Series;
-say u.^name;               #Dan::Series [coerce from Dan::Pandas::Series]
-
-my \v = Series.new( u );
-say ~v.^name;              #Dan::Pandas::Series [construct from Dan::Series]
+# round-trip to/from Dan::Series:
+my \u = s.Dan-Series;     #Dan::Series [coerce from Dan::Pandas::Series]
+my \v = Series.new( u );  #Dan::Pandas::Series [construct from Dan::Series]
 
 say "---------------------------------------------";
 ### DataFrames ###
@@ -167,6 +164,7 @@ say ~df;
 2022-01-06   0.414237   0.981379   0.571082   0.926982
 #]
 
+# 2-arity .pd methods and round trip follow the Series model
 ```
 
 
