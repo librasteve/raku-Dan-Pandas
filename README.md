@@ -1,10 +1,23 @@
 # raku Dan::Pandas
-Top level raku **D**ata **AN**alysis Module that provides **a base set of raku-style** datatype roles, accessors & methods, primarily:
-- DataSlices
-- Series
-- DataFrames
+Dan::Pandas is the first specializer for the raku [Dan](https://github.com/p6steve/raku-Dan) **D**ata **AN**alysis Module.
 
-A common basis for bindings such as ... [Dan::Pandas](https://github.com/p6steve/raku-Dan-Pandas) (via Inline::Python), Dan::Polars(tbd) (via NativeCall / Rust FFI), etc.
+Dan::Pandas uses the raku Inline::Python module to construct shadow Python objects and to wrap them to maintain the Dan API.
+- Dan::Pandas::Series is a specialized Dan::Series
+- Dan::Pandas::DataFrame is a specialized Dan::DataFrame
+
+It adapts Dan maintaining **the base set of raku-style** datatype roles, accessors & methods - with few exceptions as noted below, a Dan::Pandas object can be a drop in replacement for it's Dan equivalent.
+
+A script that uses Dan::Pandas should start with the following incantation:
+
+```raku
+#!/usr/bin/env raku
+use lib '../lib';
+
+use Dan;                #<== unlike a standalone Dan script, do NOT use the :ALL selector here
+use Dan::Pandas;
+```
+
+
 
 It's rather a zen concept since raku contains many Data Analysis constructs & concepts natively anyway (see note 7 below)
 
