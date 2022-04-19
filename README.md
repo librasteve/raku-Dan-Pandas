@@ -19,14 +19,12 @@ use Dan;                #<== unlike a standalone Dan script, do NOT use the :ALL
 use Dan::Pandas;
 ```
 
-
-
-It's rather a zen concept since raku contains many Data Analysis constructs & concepts natively anyway (see note 7 below)
+A Dockerfile is provided based on the Python [jupyter/scipy-notebook](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#jupyter-scipy-notebook) - look out for examples implemented as Jupyter notebooks on the raku Jupyter kernel. See installation section below...
 
 Contributions via PR are very welcome - please see the backlog Issue, or just email p6steve@furnival.net to share ideas!
 
 # SYNOPOSIS
-more examples in [bin/synopsis.raku](https://github.com/p6steve/raku-Dan/blob/main/bin/synopsis-dan.raku)
+more examples in [bin/synopsis-dan-pandas.raku](https://github.com/p6steve/raku-Dan/blob/main/bin/synopsis-dan-pandas.raku)
 ```raku
 ### Series ###
 
