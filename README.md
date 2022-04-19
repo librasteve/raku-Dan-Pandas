@@ -58,6 +58,7 @@ s >>+<< s;
 s[2];
 s<c>;
 
+say "---------------------------------------------";
 ## Dan Differences...
 
 say ~s.reindex(['d','e','f','g','h','i']);   #<== reindex Pandas style, padding NaN
