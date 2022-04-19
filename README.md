@@ -19,7 +19,7 @@ use Dan::Pandas;
 
 A Dockerfile is provided based on the Python [jupyter/scipy-notebook](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#jupyter-scipy-notebook) - look out for examples implemented as Jupyter notebooks on the raku Jupyter kernel. See installation section below...
 
-Contributions via PR are very welcome - please see the backlog Issue, or just email p6steve@furnival.net to share ideas!
+_Contributions via PR are very welcome - please see the backlog Issue, or just email p6steve@furnival.net to share ideas!_
 
 # SYNOPOSIS
 The raku Dan [README.md](https://github.com/p6steve/raku-Dan/blob/main/README.md) is a good outline of the Dan API. This synopsis emphasizes the differences, more examples in [bin/synopsis-dan-pandas.raku](https://github.com/p6steve/raku-Dan/blob/main/bin/synopsis-dan-pandas.raku).
