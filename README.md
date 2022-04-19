@@ -98,59 +98,44 @@ say ~v.^name;              #Dan::Pandas::Series [construct from Dan::Series]
 
 ### DataFrames ###
 
+## Dan Similarities...
+
 my \dates = (Date.new("2022-01-01"), *+1 ... *)[^6];
 my \df = DataFrame.new( [[rand xx 4] xx 6], index => dates, columns => <A B C D> );
-#  -or- DataFrame.new( [rand xx 5], columns => <A B C D>);
-#  -or- DataFrame.new( [rand xx 5] );
 say ~df;
 
 say "---------------------------------------------";
-# Data Accessors [row;col]
-say df[0;0];
-df[0;0] = 3;                #NOPE! <== unlike Dan, must use .pd method to set values, then optionally .pull
+# Accessors
 
-# Smart Accessors (mix Positional and Associative)
-say df[0]<A>;
-
-# Object Accessors & Slices (see note 1)
-say ~df[0];                 # 1d Row 0 (DataSlice)
-say ~df[*]<A>;              # 1d Col A (Series)
+df[0;0];                   # Data Accessors [row;col]
+df[0;0] = 3;               # NOPE! <== unlike Dan, must use .pd method to set values, then optionally .pull
+df[0]<A>;                  # Cascading Accessors (mix Positional and Associative)
+df[0];                     # 1d Row 0 (DataSlice)
+df[*]<A>;                  # 1d Col A (Series)
 
 say "---------------------------------------------";
-### DataFrame Operations ###
+# Operations
 
-say [+] df[*;1];           # 2d Map/Reduce
-say df >>+>> 2;            # Hyper
-say ~df.T;                 # Transpose
-say ~df.shape;             # Shape
+[+] df[*;1];               # 2d Map/Reduce
+df >>+>> 2;                # Hyper
+df.T;                      # Transpose
+df.shape;                  # Shape
 df.describe;               # Describe
 
-say ~df.sort: {.[1]};      # Sort by 2nd col (ascending)
-say ~df.grep( { .[1] < 0.5 } );  # Grep (binary filter) by 2nd column
+df.sort: {.[1]};           # Sort by 2nd col (ascending)
+df.grep( {.[1] < 0.5} );   # Grep (binary filter) by 2nd column
 
 say "---------------------------------------------";
 ### Splice ###
 
-my $ds = df2[0];                        # get a DataSlice
-$ds.splice($ds.index<A>,1,7);           # tweak it a bit
 df2.splice( 1, 2, [j => $ds] );         # row-wise splice:
-
-my $se = df2[*]<D>;                     # get a Series
-$se.splice(2,1,8);                      # tweak it a bit
 df2.splice( :ax, 1, 2, [K => $se] );    # column-wise splice: axis => 1
 
 say "---------------------------------------------";
 ### Concat ###
 
-my \dfa = DataFrame.new(
-        [['a', 1], ['b', 2]],
-        columns => <letter number>,
-); 
-
-my \dfc = DataFrame.new(
-        [['c', 3, 'cat'], ['d', 4, 'dog']],
-        columns => <animal letter number>,
-); 
+my \dfa = DataFrame.new( [['a', 1], ['b', 2]], columns => <letter number> ); 
+my \dfc = DataFrame.new( [['c', 3, 'cat'], ['d', 4, 'dog']], columns => <animal letter number> ); 
 
 dfa.concat(dfc);
 say ~dfa;
@@ -164,16 +149,29 @@ say ~dfa;
 #]
 
 say "---------------------------------------------";
+## Dan Differences...
+
+s.pull;       #explicit pull operation synchronizes raku object attributes to latest Python values (@.dfata, %.index, %.columns)
+
 ### .pd Methods ###
 
 #The Dan::Pandas .pd method takes a Python method call string and handles it from raku:
-df.pd: '.shape';
 df.pd: '.flags';
-df.pd: '.T';
 df.pd: '.to_json("test.json")';
 df.pd: '.to_csv("test.csv")';
 df.pd: '.iloc[2] = 23';
 df.pd: '.iloc[2]';
+say ~df;
+
+#`[
+                    A          B          C          D
+2022-01-01   0.744346   0.963167   0.548315   0.667035
+2022-01-02   0.109722   0.007992   0.999305   0.613870
+2022-01-03  23.000000  23.000000  23.000000  23.000000
+2022-01-04   0.403802   0.762486   0.220328   0.152730
+2022-01-05   0.245156   0.864305   0.577664   0.365762
+2022-01-06   0.414237   0.981379   0.571082   0.926982
+#]
 
 ```
 
