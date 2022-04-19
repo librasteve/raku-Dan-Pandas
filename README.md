@@ -5,7 +5,7 @@ Dan::Pandas uses the raku [Inline::Python](https://raku.land/cpan:NINE/Inline::P
 - Dan::Pandas::Series is a specialized Dan::Series
 - Dan::Pandas::DataFrame is a specialized Dan::DataFrame
 
-It adapts Dan maintaining **the base set of raku-style** datatype roles, accessors & methods - with few exceptions as noted below, a Dan::Pandas object can be a drop in replacement for it's Dan equivalent.
+It adapts Dan maintaining **the base set of raku-style** datatype roles, accessors & methods - with a few exceptions as noted below, a Dan::Pandas object can be a drop in replacement for it's Dan equivalent.
 
 A script that uses Dan::Pandas should start with the following incantation:
 
