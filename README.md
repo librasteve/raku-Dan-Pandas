@@ -22,7 +22,7 @@ A Dockerfile is provided based on the Python [jupyter/scipy-notebook](https://ju
 Contributions via PR are very welcome - please see the backlog Issue, or just email p6steve@furnival.net to share ideas!
 
 # SYNOPOSIS
-The raku Dan [README.md](https://github.com/p6steve/raku-Dan/blob/main/README.md) is currently the best resource for the Dan API. This synopsis emphasizes the differences, more examples in [bin/synopsis-dan-pandas.raku](https://github.com/p6steve/raku-Dan/blob/main/bin/synopsis-dan-pandas.raku).
+The raku Dan [README.md](https://github.com/p6steve/raku-Dan/blob/main/README.md) is a good outline of the Dan API. This synopsis emphasizes the differences, more examples in [bin/synopsis-dan-pandas.raku](https://github.com/p6steve/raku-Dan/blob/main/bin/synopsis-dan-pandas.raku).
 ```raku
 ### Series ###
 
