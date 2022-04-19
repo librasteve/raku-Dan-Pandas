@@ -228,8 +228,8 @@ class RakuSeries:
 
     #| set raku attrs to rs_array / rs_index
     method pull {
-	%!index   = $.index;
-	@!data    = $!po.rs_values;
+	%!index = $.index;
+	@!data  = $!po.rs_values;
     }
 
     #### MAC Methods #####

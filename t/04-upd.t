@@ -62,8 +62,6 @@ my $df3 = DataFrame.new([
 my $ds = $df3[1];
 $ds.splice(3,1,(D => 7));
 $ds.name = '7';
-say ~$ds;
-say 1;
 
 my $se = $df3.series: <A>;
 $se.splice(2,1,(2 => 7));
@@ -72,15 +70,8 @@ $se.splice(2,1,(2 => 7));
 $df3.splice(2,1,$ds);
 ok $df3[2]<D> == 7,                                                             'df.splice array [row]';
 
-#iamerejh
-say ~$df3;
-say ~$se;
-
-say ~$df3.splice( :ax(1),3,2,$se);
-say ~$df3;
-ok $df3[2]<A> == 7,                                                             'df.splice array [col]';
-
-die;
+$df3.splice(:ax(1),2,2,(X=>$se));     ##note now aop
+ok $df3[2]<X> == 7,                                                             'df.splice array [col]';
 
 my $df4 = DataFrame.new([
         A => 1.0,
@@ -91,11 +82,11 @@ my $df4 = DataFrame.new([
         F => "foo",
 ]);
 
-$df4.splice( axis => 'row',1,2,(j => $ds,) );
-ok $df4<j><D> == 7,                                                                 'df.splice pair [row]';
+$df4.splice( axis => 'row',1,2,(j => $ds) );
+ok $df4<j><D> == 7,                                                             'df.splice pair [row]';
 
-$df4.splice( :ax(1),3,2,$se);
-ok $df4<j><X> == 1,                                                                 'df.splice pair [col]';
+$df4.splice( :ax(1),3,2,(X => $se) );
+ok $df4<j><X> == 1,                                                             'df.splice pair [col]';
 
 my \dfa = DataFrame.new(
         [['a', 1], ['b', 2]],
