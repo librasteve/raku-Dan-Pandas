@@ -5,7 +5,7 @@ Dan::Pandas uses the raku [Inline::Python](https://raku.land/cpan:NINE/Inline::P
 - Dan::Pandas::Series is a specialized Dan::Series
 - Dan::Pandas::DataFrame is a specialized Dan::DataFrame
 
-It adapts Dan maintaining **the base set of raku-style** datatype roles, accessors & methods - with few exceptions as noted below, a Dan::Pandas object can be a drop in replacement for it's Dan equivalent.
+It adapts Dan maintaining **the base set of raku-style** datatype roles, accessors & methods - with a few exceptions as noted below, a Dan::Pandas object can be a drop in replacement for it's Dan equivalent.
 
 A script that uses Dan::Pandas should start with the following incantation:
 
@@ -19,7 +19,7 @@ use Dan::Pandas;
 
 A Dockerfile is provided based on the Python [jupyter/scipy-notebook](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#jupyter-scipy-notebook) - look out for examples implemented as Jupyter notebooks on the raku Jupyter kernel. See installation section below...
 
-Contributions via PR are very welcome - please see the backlog Issue, or just email p6steve@furnival.net to share ideas!
+_Contributions via PR are very welcome - please see the backlog Issue, or just email p6steve@furnival.net to share ideas!_
 
 # SYNOPOSIS
 The raku Dan [README.md](https://github.com/p6steve/raku-Dan/blob/main/README.md) is a good outline of the Dan API. This synopsis emphasizes the differences, more examples in [bin/synopsis-dan-pandas.raku](https://github.com/p6steve/raku-Dan/blob/main/bin/synopsis-dan-pandas.raku).
