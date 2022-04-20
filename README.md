@@ -17,7 +17,7 @@ use Dan;                #<== unlike a standalone Dan script, do NOT use the :ALL
 use Dan::Pandas;
 ```
 
-A Dockerfile is provided based on the Python [jupyter/scipy-notebook](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#jupyter-scipy-notebook) - look out for examples implemented as Jupyter notebooks on the raku Jupyter kernel. See installation section below...
+A Dockerfile is provided based on the Python [jupyter/scipy-notebook](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#jupyter-scipy-notebook) - ideal for example Dan Jupyter notebooks!
 
 _Contributions via PR are very welcome - please see the backlog Issue, or just email p6steve@furnival.net to share ideas!_
 
