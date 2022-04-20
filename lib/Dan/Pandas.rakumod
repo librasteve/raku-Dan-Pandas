@@ -1,6 +1,7 @@
 unit module Dan::Pandas:ver<0.0.1>:auth<Steve Roe (p6steve@furnival.net)>;
 
 use Inline::Python;
+use Dan;
 
 # generates default column labels
 constant @alphi = 'A'..∞; 
