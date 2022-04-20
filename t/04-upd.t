@@ -18,8 +18,7 @@ s.ix: <b c d>;
 is ~s, "b    1\nc    0\nd    2\nName: anon, dtype: int64",			's.ix';
 
 s.splice: *-1;
-say ~s;
-ok s<d> eq NaN,                                                            	's.pop';
+ok s.elems ==2,                                                                 's.pop';
 
 s.splice( 1,2,(j => NaN) );
 ok s.ix[1] eq 'j',                                                          	's.splice';
