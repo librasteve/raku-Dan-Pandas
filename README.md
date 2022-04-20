@@ -171,6 +171,6 @@ say ~df;
 # Installation
 - docker run -it p6steve/raku-dan:pandas-2022.02-amd64 (-or- :pandas-2022.02.arm64 see Dockerfile)
 - zef install Dan::Pandas
-- or -
+- - or -
 - git clone https://github.com/p6steve/raku-Dan-Pandas.git
 - cd raku-dan-pandas/bin/ && ./synopsis-dan-pandas.raku
