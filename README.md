@@ -73,7 +73,7 @@ i         NaN
 #]
 Name: anon, dtype: float64
 
-s.pull;       #explicit pull operation synchronizes raku object attributes to latest Python values (@.dfata, %.index, %.columns)
+s.pull;       #explicit pull operation synchronizes raku object attributes to shadow Python values (@.data, %.index, %.columns)
 
 #The Dan::Pandas .pd method takes a Python method call string and handles it from raku:
 s.pd: '.shape';
@@ -143,7 +143,7 @@ say ~dfa;
 say "---------------------------------------------";
 ## Dan Differences...
 
-df.pull;       #explicit pull operation synchronizes raku object attributes to latest Python values (@.dfata, %.index, %.columns)
+df.pull;       #explicit pull operation synchronizes raku object attributes to shadow Python values (@.data, %.index, %.columns)
 
 ### .pd Methods ###
 
