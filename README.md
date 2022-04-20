@@ -21,6 +21,13 @@ A Dockerfile is provided based on the Python [jupyter/scipy-notebook](https://ju
 
 _Contributions via PR are very welcome - please see the backlog Issue, or just email p6steve@furnival.net to share ideas!_
 
+# Installation
+- docker run -it p6steve/raku-dan:pandas-2022.02-amd64 -or- :pandas-2022.02.arm64 (see Dockerfile)
+- zef install Dan::Pandas
+- - or -
+- git clone https://github.com/p6steve/raku-Dan-Pandas.git
+- cd raku-dan-pandas/bin/ && ./synopsis-dan-pandas.raku
+
 # SYNOPOSIS
 The raku Dan [README.md](https://github.com/p6steve/raku-Dan/blob/main/README.md) is a good outline of the Dan API. This synopsis emphasizes the differences, more examples in [bin/synopsis-dan-pandas.raku](https://github.com/p6steve/raku-Dan/blob/main/bin/synopsis-dan-pandas.raku).
 ```raku
@@ -166,11 +173,3 @@ say ~df;
 
 # 2-arity .pd methods and round trip follow the Series model
 ```
-
-
-# Installation
-- docker run -it p6steve/raku-dan:pandas-2022.02-amd64 -or- :pandas-2022.02.arm64 (see Dockerfile)
-- zef install Dan::Pandas
-- - or -
-- git clone https://github.com/p6steve/raku-Dan-Pandas.git
-- cd raku-dan-pandas/bin/ && ./synopsis-dan-pandas.raku
