@@ -143,7 +143,7 @@ say ~dfa;
 say "---------------------------------------------";
 ## Dan Differences...
 
-s.pull;       #explicit pull operation synchronizes raku object attributes to latest Python values (@.dfata, %.index, %.columns)
+df.pull;       #explicit pull operation synchronizes raku object attributes to latest Python values (@.dfata, %.index, %.columns)
 
 ### .pd Methods ###
 
