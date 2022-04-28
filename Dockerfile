@@ -3,6 +3,7 @@ FROM --platform=linux/arm64 jupyter/scipy-notebook
 ENV PATH=$PATH:/usr/share/perl6/site/bin
 
 USER root
+
 RUN buildDeps="libc6-dev libencode-perl libzstd-dev libssl-dev \
                libbz2-dev libreadline-dev libsqlite3-dev llvm \
                libncurses5-dev tk-dev liblzma-dev \
@@ -27,10 +28,10 @@ RUN mkdir rakudo && git init \
     && zef install fez \
     && zef install Linenoise App::Mi6 App::Prove6 \
     && zef install JSON::Tiny Digest::HMAC Digest::SHA256::Native \
-    && zef install https://github.com/niner/Inline-Python.git --exclude="python3" \
+    #!!&& zef install https://github.com/niner/Inline-Python.git --exclude="python3" \
+    && zef install https://github.com/niner/Inline-Python.git --exclude="python3" --force-test \
     && zef install https://github.com/p6steve/raku-dan.git
     #&& apt-get purge -y --auto-remove $buildDeps
-
 
 
 #USER jovyan
