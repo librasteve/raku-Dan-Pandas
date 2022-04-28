@@ -34,8 +34,9 @@ RUN mkdir rakudo && git init \
     && zef install https://github.com/p6steve/raku-dan.git
     #&& apt-get purge -y --auto-remove $buildDeps
 
-
-#USER jovyan
+#USER ${NB_UID}
 
 ENTRYPOINT ["/bin/bash"]
 
+#EXPOSE 8888
+#CMD ["jupyter", "notebook", "--port=8888", "--no-browser", "--ip=0.0.0.0", "--allow-root"]
