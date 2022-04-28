@@ -1,4 +1,5 @@
-FROM --platform=linux/arm64 jupyter/scipy-notebook 
+FROM jupyter/scipy-notebook 
+#FROM --platform=linux/arm64 jupyter/scipy-notebook 
 
 ENV PATH=$PATH:/usr/share/perl6/site/bin
 
