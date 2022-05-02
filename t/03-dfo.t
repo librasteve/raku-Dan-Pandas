@@ -47,7 +47,7 @@ ok (df.sort: { df.ix.reverse.[$++] })[1][1] == 1,                               
 
 # Grep MOVE TO END AS DESTRUCTIVE
 is ~df.grep( { .[1] < 0.5 } ), "   A  B  C  D ",                                        '.grep: {.[1] < 0.5}';
-is ~df.grep( { df.ix[$++] eq <2022-01-02 2022-01-06>.any } ), "   A  B  C  D ",         '.grep index (multiple)';
+ok df.grep( { df.ix[$++] eq <2022-01-02 2022-01-06>.any } ).elems == 2,                 '.grep index (multiple)';
 
 my \df2 = DataFrame.new([
         A => 1.0,
