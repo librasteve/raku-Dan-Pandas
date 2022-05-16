@@ -37,8 +37,8 @@ role Series does Positional does Iterable is export {
     has Any     @.data;
     has Int     %!index;
 
-    has $!py = Py.instance.py; 	  
-    has $.po;			  #each instance has own Python Series obj 
+    has $.py = Py.instance.py; 	  
+    has $.po;			  #ref to this Python Series obj 
 
     ### Constructors ###
  
@@ -370,8 +370,8 @@ role DataFrame does Positional does Iterable is export {
     has Int         %!index;            #row index
     has Int         %!columns;          #column index
 
-    has $!py = Py.instance.py; 	  
-    has $.po;			  #each instance has own Python DataFrame obj 
+    has $.py = Py.instance.py; 	  
+    has $.po;			  #ref to Python DataFrame obj 
 
     ### Constructors ###
  
