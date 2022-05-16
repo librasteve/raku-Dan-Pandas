@@ -7,23 +7,24 @@ Dan::Pandas uses the raku [Inline::Python](https://raku.land/cpan:NINE/Inline::P
 
 It adapts Dan maintaining **the base set of raku-style** datatype roles, accessors & methods - with a few exceptions as noted below, a Dan::Pandas object can be a drop in replacement for it's Dan equivalent.
 
-A script that uses Dan::Pandas should start with the following incantation:
+A Dockerfile is provided based on the Python [jupyter/scipy-notebook](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#jupyter-scipy-notebook) - ideal for example Dan Jupyter notebooks!
 
+_Contributions via PR are very welcome - please see the backlog Issue, or just email p6steve@furnival.net to share ideas!_
+
+# Installation
+- docker run -it p6steve/raku-dan:pandas-2022.02-amd64 -or- :pandas-2022.02.arm64 (see Dockerfile)
+- zef install https://github.com/p6steve/raku-Dan-Pandas.git
+- cd /usr/share/perl6/site/bin && ./synopsis-dan-pandas.raku
+
+# SYNOPOSIS
+The raku Dan [README.md](https://github.com/p6steve/raku-Dan/blob/main/README.md) is a good outline of the Dan API. This synopsis emphasizes the differences, more examples in [bin/synopsis-dan-pandas.raku](https://github.com/p6steve/raku-Dan/blob/main/bin/synopsis-dan-pandas.raku).
 ```raku
 #!/usr/bin/env raku
 use lib '../lib';
 
 use Dan;                #<== unlike a standalone Dan script, do NOT use the :ALL selector here
 use Dan::Pandas;
-```
 
-A Dockerfile is provided based on the Python [jupyter/scipy-notebook](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#jupyter-scipy-notebook) - look out for examples implemented as Jupyter notebooks on the raku Jupyter kernel. See installation section below...
-
-_Contributions via PR are very welcome - please see the backlog Issue, or just email p6steve@furnival.net to share ideas!_
-
-# SYNOPOSIS
-The raku Dan [README.md](https://github.com/p6steve/raku-Dan/blob/main/README.md) is a good outline of the Dan API. This synopsis emphasizes the differences, more examples in [bin/synopsis-dan-pandas.raku](https://github.com/p6steve/raku-Dan/blob/main/bin/synopsis-dan-pandas.raku).
-```raku
 ### Series ###
 
 ## Dan Similarities...
@@ -72,7 +73,7 @@ i         NaN
 #]
 Name: anon, dtype: float64
 
-s.pull;       #explicit pull operation synchronizes raku object attributes to latest Python values (@.dfata, %.index, %.columns)
+s.pull;       #explicit pull operation synchronizes raku object attributes to shadow Python values (@.data, %.index, %.columns)
 
 #The Dan::Pandas .pd method takes a Python method call string and handles it from raku:
 s.pd: '.shape';
@@ -142,7 +143,7 @@ say ~dfa;
 say "---------------------------------------------";
 ## Dan Differences...
 
-s.pull;       #explicit pull operation synchronizes raku object attributes to latest Python values (@.dfata, %.index, %.columns)
+df.pull;       #explicit pull operation synchronizes raku object attributes to shadow Python values (@.data, %.index, %.columns)
 
 ### .pd Methods ###
 
@@ -166,9 +167,3 @@ say ~df;
 
 # 2-arity .pd methods and round trip follow the Series model
 ```
-
-
-# Installation
-- docker run -it p6steve/raku-dan:pandas-2022.02-arm64 (see Dockerfile)
-- git clone https://github.com/p6steve/raku-Dan-Pandas.git
-- cd raku-dan-pandas/bin/ && ./synopsis-dan-pandas.raku
