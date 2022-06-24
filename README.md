@@ -16,7 +16,7 @@ _Contributions via PR are very welcome - please see the backlog Issue, or just e
 - zef install https://github.com/p6steve/raku-Dan-Pandas.git
 - cd /usr/share/perl6/site/bin && ./synopsis-dan-pandas.raku
 
-# SYNOPOSIS
+# SYNOPSIS
 The raku Dan [README.md](https://github.com/p6steve/raku-Dan/blob/main/README.md) is a good outline of the Dan API. This synopsis emphasizes the differences, more examples in [bin/synopsis-dan-pandas.raku](https://github.com/p6steve/raku-Dan/blob/main/bin/synopsis-dan-pandas.raku).
 ```raku
 #!/usr/bin/env raku
