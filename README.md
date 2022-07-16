@@ -1,7 +1,7 @@
 # raku Dan::Pandas
 Dan::Pandas is the first specializer for the raku [Dan](https://github.com/p6steve/raku-Dan) **D**ata **AN**alysis Module.
 
-Dan::Pandas uses the raku [Inline::Python](https://raku.land/cpan:NINE/Inline::Python) module to construct shadow Python objects and to wrap them to maintain the Dan API.
+Dan::Pandas uses raku [Inline::Python](https://raku.land/cpan:NINE/Inline::Python) to construct shadow Python objects and to wrap them to maintain the Dan API.
 - Dan::Pandas::Series is a specialized Dan::Series
 - Dan::Pandas::DataFrame is a specialized Dan::DataFrame
 
