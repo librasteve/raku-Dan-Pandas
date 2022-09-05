@@ -12,7 +12,8 @@ A Dockerfile is provided based on the Python [jupyter/scipy-notebook](https://ju
 _Contributions via PR are very welcome - please see the backlog Issue, or just email p6steve@furnival.net to share ideas!_
 
 # Installation
-- docker run -it p6steve/raku-dan:pandas-2022.02-amd64 -or- :pandas-2022.02.arm64 (see Dockerfile)
+- docker run -it p6steve/raku-dan:pandas-2022.02-amd64 -or- :pandas-2022.02-arm64 (see Dockerfile)
+  [transitioning to docker run -it p6steve/raku-dan:pandas-amd64]
 - zef install https://github.com/p6steve/raku-Dan-Pandas.git
 - cd /usr/share/perl6/site/bin && ./synopsis-dan-pandas.raku
 
