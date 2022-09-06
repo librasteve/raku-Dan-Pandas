@@ -1,4 +1,4 @@
-FROM p6steve/rakudo:ipyjk-2022.02-amd64
+FROM p6steve/rakudo:ipyjk
 
 USER root
 
