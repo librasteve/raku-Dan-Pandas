@@ -1,5 +1,7 @@
 unit module Dan::Pandas:ver<0.0.2>:auth<Steve Roe (p6steve@furnival.net)>;
 
+no precompilation;
+
 use Inline::Python;
 use Dan;
 
