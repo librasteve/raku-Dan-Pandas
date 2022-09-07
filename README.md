@@ -1,3 +1,6 @@
+[![License: Artistic-2.0](https://img.shields.io/badge/License-Artistic%202.0-0298c3.svg)](https://opensource.org/licenses/Artistic-2.0)
+[![raku-dan:pandas -> DH](https://github.com/p6steve/raku-Dan-Pandas/actions/workflows/pandas-weekly.yaml/badge.svg)](https://github.com/p6steve/raku-Dan-Pandas/actions/workflows/pandas-weekly.yaml)
+
 # raku Dan::Pandas
 Dan::Pandas is the first specializer for the raku [Dan](https://github.com/p6steve/raku-Dan) **D**ata **AN**alysis Module.
 
@@ -168,3 +171,5 @@ say ~df;
 
 # 2-arity .pd methods and round trip follow the Series model
 ```
+
+copyright(c) 2022 Henley Cloud Consulting Ltd.
