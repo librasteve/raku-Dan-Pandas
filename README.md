@@ -1,7 +1,7 @@
 [![License: Artistic-2.0](https://img.shields.io/badge/License-Artistic%202.0-0298c3.svg)](https://opensource.org/licenses/Artistic-2.0)
 [![raku-dan:pandas -> DH](https://github.com/p6steve/raku-Dan-Pandas/actions/workflows/pandas-weekly.yaml/badge.svg)](https://github.com/p6steve/raku-Dan-Pandas/actions/workflows/pandas-weekly.yaml)
 
-*THIS MODULE IS PURELY EXPERIMENTAL AND NOT SUITABLE FOR USAGE*
+*THIS MODULE IS EXPERIMENTAL AND SUBJECT TO CHANGE WITHOUT NOTICE*
 
 # raku Dan::Pandas
 Dan::Pandas is the first specializer for the raku [Dan](https://github.com/p6steve/raku-Dan) **D**ata **AN**alysis Module.
