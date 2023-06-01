@@ -1,4 +1,4 @@
-unit module Dan::Pandas:ver<0.0.2>:auth<Steve Roe (p6steve@furnival.net)>;
+unit module Dan::Pandas:ver<0.0.2>:auth<Steve Roe (librasteve@furnival.net)>;
 
 no precompilation;
 
@@ -24,7 +24,7 @@ class Py {
 
     submethod instance {
 	unless $instance {
-            $instance = Py.bless( py => Inline::Python.new ); 
+        $instance = Py.bless( py => Inline::Python.new );
  	    $instance.py.run('import numpy as np');
 	    $instance.py.run('import pandas as pd');
 	}

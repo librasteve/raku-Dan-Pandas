@@ -4,9 +4,9 @@
   "version": "0.0.2",
   "perl": "6.d",
   "authors": [
-    "p6steve"
+    "librasteve"
   ],
-  "auth": "zef:p6steve",
+  "auth": "zef:librasteve",
   "depends": [
     "Dan",
     "Inline::Python"
@@ -27,5 +27,5 @@
     "Python"
   ],
   "api": "1",
-  "source-url": "git://github.com/p6steve/raku-dan-pandas.git"
+  "source-url": "git://github.com/librasteve/raku-dan-pandas.git"
 }

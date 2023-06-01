@@ -1,8 +1,8 @@
-FROM p6steve/rakudo:ipyjk
+FROM librasteve/rakudo:ipyjk
 
 USER root
 
-RUN zef install https://github.com/p6steve/raku-dan-pandas.git
+RUN zef install https://github.com/librasteve/raku-dan-pandas.git
 
 #USER ${NB_UID}
 

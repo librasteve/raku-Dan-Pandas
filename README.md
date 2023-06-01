@@ -1,10 +1,10 @@
 [![License: Artistic-2.0](https://img.shields.io/badge/License-Artistic%202.0-0298c3.svg)](https://opensource.org/licenses/Artistic-2.0)
-[![raku-dan:pandas -> DH](https://github.com/p6steve/raku-Dan-Pandas/actions/workflows/pandas-weekly.yaml/badge.svg)](https://github.com/p6steve/raku-Dan-Pandas/actions/workflows/pandas-weekly.yaml)
+[![raku-dan:pandas -> DH](https://github.com/librasteve/raku-Dan-Pandas/actions/workflows/pandas-weekly.yaml/badge.svg)](https://github.com/librasteve/raku-Dan-Pandas/actions/workflows/pandas-weekly.yaml)
 
 *THIS MODULE IS EXPERIMENTAL AND SUBJECT TO CHANGE WITHOUT NOTICE*
 
 # raku Dan::Pandas
-Dan::Pandas is the first specializer for the raku [Dan](https://github.com/p6steve/raku-Dan) **D**ata **AN**alysis Module.
+Dan::Pandas is the first specializer for the raku [Dan](https://github.com/librasteve/raku-Dan) **D**ata **AN**alysis Module.
 
 Dan::Pandas uses raku [Inline::Python](https://raku.land/cpan:NINE/Inline::Python) to construct shadow Python objects and to wrap them to maintain the Dan API.
 - Dan::Pandas::Series is a specialized Dan::Series
@@ -14,16 +14,16 @@ It adapts Dan maintaining **the base set of raku-style** datatype roles, accesso
 
 A Dockerfile is provided based on the Python [jupyter/scipy-notebook](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#jupyter-scipy-notebook) - ideal for example Dan Jupyter notebooks!
 
-_Contributions via PR are very welcome - please see the backlog Issue, or just email p6steve@furnival.net to share ideas!_
+_Contributions via PR are very welcome - please see the backlog Issue, or just email librasteve@furnival.net to share ideas!_
 
 # Installation
-- docker run -it p6steve/raku-dan:pandas-2022.02-amd64 -or- :pandas-2022.02-arm64 (see Dockerfile)
-  [transitioning to docker run -it p6steve/raku-dan:pandas-amd64]
-- zef install https://github.com/p6steve/raku-Dan-Pandas.git
+- docker run -it librasteve/raku-dan:pandas-2022.02-amd64 -or- :pandas-2022.02-arm64 (see Dockerfile)
+  [transitioning to docker run -it librasteve/raku-dan:pandas-amd64]
+- zef install https://github.com/librasteve/raku-Dan-Pandas.git
 - cd /usr/share/perl6/site/bin && ./synopsis-dan-pandas.raku
 
 # SYNOPSIS
-The raku Dan [README.md](https://github.com/p6steve/raku-Dan/blob/main/README.md) is a good outline of the Dan API. This synopsis emphasizes the differences, more examples in [bin/synopsis-dan-pandas.raku](https://github.com/p6steve/raku-Dan/blob/main/bin/synopsis-dan-pandas.raku).
+The raku Dan [README.md](https://github.com/librasteve/raku-Dan/blob/main/README.md) is a good outline of the Dan API. This synopsis emphasizes the differences, more examples in [bin/synopsis-dan-pandas.raku](https://github.com/librasteve/raku-Dan/blob/main/bin/synopsis-dan-pandas.raku).
 ```raku
 #!/usr/bin/env raku
 use lib '../lib';
