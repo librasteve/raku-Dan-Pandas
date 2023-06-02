@@ -1,7 +1,7 @@
 {
   "name": "Dan::Pandas",
   "description": "Bridge Dan to Python Pandas",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "perl": "6.d",
   "authors": [
     "librasteve"
