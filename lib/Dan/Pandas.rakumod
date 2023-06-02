@@ -784,6 +784,15 @@ class RakuDataFrame:
 	$.pull;
         @!data.hyper
     }
+    
+    # Extra support for + numeric and  [+] reduce via list and Numeric
+
+    method Numeric {
+        @!data.Numeric
+    }
+    method list {
+        @!data.list
+    }
 
     ### Splice ###
     #| get self as a Dan::DataFrame, perform splice operation and push back
