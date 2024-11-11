@@ -2,7 +2,13 @@ FROM librasteve/rakudo:ipyjk
 
 USER root
 
-RUN zef install https://github.com/librasteve/raku-dan-pandas.git
+# Set default LD_LIBRARY_PATH variable
+ENV LD_LIBRARY_PATH=/opt/conda/lib  
+
+# Persist the updated LD_LIBRARY_PATH in the environment
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH
+
+RUN zef install https://github.com/librasteve/raku-dan-pandas.git --verbose
 
 #USER ${NB_UID}
 
