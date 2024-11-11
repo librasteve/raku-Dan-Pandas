@@ -12,7 +12,7 @@ Dan::Pandas uses raku [Inline::Python](https://raku.land/cpan:NINE/Inline::Pytho
 
 It adapts Dan maintaining **the base set of raku-style** datatype roles, accessors & methods - with a few exceptions as noted below, a Dan::Pandas object can be a drop in replacement for it's Dan equivalent.
 
-A Dockerfile is provided based on the Python [jupyter/scipy-notebook](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#jupyter-scipy-notebook) - ideal for example Dan Jupyter notebooks!
+A Dockerfile is provided based on the Python [jupyter/scipy-notebook](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#jupyter-scipy-notebook) - ideal for example Dan Jupyter notebooks! Also checkout [Dan Jupyter](https://github.com/librasteve/raku-Dan-Jupyter) for more notebook examples.
 
 _Contributions via PR are very welcome - please see the backlog Issue, or just email librasteve@furnival.net to share ideas!_
 
